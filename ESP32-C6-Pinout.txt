@@ -16,19 +16,19 @@
 | 14        | 5V0      |          |           |         |             |          | Power rail (5.0V)     |
 | 15        | GND      |          |           |         |             |          | Ground                |
 | 16        | NC       |          |           |         |             |          |                       |
-| 17        | GND      |          |           |         |             |          | Ground                |
-| 18        | IO16     | GPIO16   |           |         |             |          | U0TXD                 |
-| 19        | IO17     | GPIO17   |           |         |             |          | U0RXD                 |
-| 20        | IO15     | GPIO15   |           |         |             | JTAG     |                       |
-| 21        | IO23     | GPIO23   |           |         | SDIO_DATA3  |          |                       |
-| 22        | IO22     | GPIO22   |           |         | SDIO_DATA2  |          |                       |
-| 23        | IO21     | GPIO21   |           |         | SDIO_DATA1  |          |                       |
-| 24        | IO20     | GPIO20   |           |         | SDIO_DATA0  |          |                       |
-| 25        | IO19     | GPIO19   |           |         | SDIO_CLK    |          |                       |
-| 26        | IO18     | GPIO18   |           |         | SDIO_CMD    |          |                       |
-| 27        | IO9      | GPIO9    |           |         |             |          | BOOT                  |
-| 28        | GND      |          |           |         |             |          | Ground                |
-| 29        | IO13     | GPIO13   |           |         |             |          | USB_D+                |
-| 30        | IO12     | GPIO12   |           |         |             |          | USB_D-                |
-| 31        | GND      |          |           |         |             |          | Ground                |
-| 32        | NC       |          |           |         |             |          |                       |
+| 17        | NC       |          |           |         |             |          |                       |
+| 18        | GND      |          |           |         |             |          | Ground                |
+| 19        | IO12     | GPIO12   |           |         |             |          | USB_D-                |
+| 20        | IO13     | GPIO13   |           |         |             |          | USB_D+                |
+| 21        | GND      |          |           |         |             |          | Ground                |
+| 22        | IO9      | GPI09    |           |         |             |          | BOOT                  |
+| 23        | IO18     | GPIO18   |           |         | SDIO_CMD    |          |                       |
+| 24        | IO19     | GPIO19   |           |         | SDIO_CLK    |          |                       |
+| 25        | IO20     | GPIO20   |           |         | SDIO_DATA0  |          |                       |
+| 26        | IO21     | GPIO21   |           |         | SDIO_DATA1  |          |                       |
+| 27        | IO22     | GPIO22   |           |         | SDIO_DATA2  |          |                       |
+| 28        | IO23     | GPIO23   |           |         | SDIO_DATA3  |          |                       |
+| 29        | IO15     | GPIO15   |           |         |             | JTAG     |                       |
+| 30        | RX       | GPIO17   |           |         |             |          | U0RXD                 |
+| 31        | TX       | GPIO16   |           |         |             |          | U0TXD                 |
+| 32        | GND      |          |           |         |             |          | Ground                |
