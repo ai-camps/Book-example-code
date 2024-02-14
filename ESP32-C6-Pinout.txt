@@ -1,0 +1,34 @@
+| PIN Order | PIN Name | GPIO PIN | ADC PIN   | I2C PIN | SDIO PIN    | JTAG PIN | Other PIN Functions   |
+|-----------|----------|----------|-----------|---------|-------------|----------|-----------------------|
+| 1         | 3.3V     |          |           |         |             |          | Power rail (3.3V)     |
+| 2         | Reset    |          |           |         |             |          | Reset                 |
+| 3         | IO4      | GPIO4    | ADC1_CH4  |         | SDIO        | MTMS     | LP_UART_RXD           |
+| 4         | IO5      | GPIO5    | ADC1_CH5  |         | SDIO        | MTDI     | LP_UART_TXD           |
+| 5         | IO6      | GPIO6    | ADC1_CH6  | SDA     |             | MTCK     | LP_UART_SDA           |
+| 6         | IO7      | GPIO7    |           | SCL     |             | MTDO     | LP_UART_SCL           |
+| 7         | IO0      | GPIO0    | ADC1_CH0  |         |             |          | LP_UART_DTRN          |
+| 8         | IO1      | GPIO1    | ADC1_CH1  |         |             |          | LP_UART_DSRN          |
+| 9         | IO8      | GPIO8    |           |         |             |          | RGB LED, BOOT, ROM    |
+| 10        | IO10     | GPIO10   |           |         |             |          |                       |
+| 11        | IO11     | GPIO11   |           |         |             |          |                       |
+| 12        | IO2      | GPIO2    | ADC1_CH2  |         |             |          | LP_UART_RTSN          |
+| 13        | IO3      | GPIO3    | ADC1_CH3  |         |             |          | LP_UART_CTSN          |
+| 14        | 5V0      |          |           |         |             |          | Power rail (5.0V)     |
+| 15        | GND      |          |           |         |             |          | Ground                |
+| 16        | NC       |          |           |         |             |          |                       |
+| 17        | GND      |          |           |         |             |          | Ground                |
+| 18        | IO16     | GPIO16   |           |         |             |          | U0TXD                 |
+| 19        | IO17     | GPIO17   |           |         |             |          | U0RXD                 |
+| 20        | IO15     | GPIO15   |           |         |             | JTAG     |                       |
+| 21        | IO23     | GPIO23   |           |         | SDIO_DATA3  |          |                       |
+| 22        | IO22     | GPIO22   |           |         | SDIO_DATA2  |          |                       |
+| 23        | IO21     | GPIO21   |           |         | SDIO_DATA1  |          |                       |
+| 24        | IO20     | GPIO20   |           |         | SDIO_DATA0  |          |                       |
+| 25        | IO19     | GPIO19   |           |         | SDIO_CLK    |          |                       |
+| 26        | IO18     | GPIO18   |           |         | SDIO_CMD    |          |                       |
+| 27        | IO9      | GPIO9    |           |         |             |          | BOOT                  |
+| 28        | GND      |          |           |         |             |          | Ground                |
+| 29        | IO13     | GPIO13   |           |         |             |          | USB_D+                |
+| 30        | IO12     | GPIO12   |           |         |             |          | USB_D-                |
+| 31        | GND      |          |           |         |             |          | Ground                |
+| 32        | NC       |          |           |         |             |          |                       |
