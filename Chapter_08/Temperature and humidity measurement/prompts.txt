@@ -1,0 +1,1 @@
+“Hi, ChatGPT, could you please generate the code for connecting ESP32-C6 to DHT11? The code should read the temperature in Fahrenheit and retrieve the output data every 1 minute. Additionally, please provide the dependency libraries for DHT11 on PlatformIO IDE and include it in the platformio.ini file.”
