@@ -11,10 +11,10 @@
 //
 // Requirements:
 // 1. Read temperature (0°C to 50°C) and humidity (20% to 90%RH) data every 3 seconds.
-// 2. Indicate sensor read error with a red blinking RGB LED at 100ms intervals.
+// 2. Indicate sensor read error with a steady red RGB LED.
 // 3. Show a steady green RGB LED for temperature range 15°C to 25°C and humidity range 10%RH to 60%RH.
 // 4. Show a steady blue RGB LED for temperature below 15°C or humidity below 10%RH.
-// 5. Show a steady red RGB LED for temperature above 25°C or humidity above 60%RH.
+// 5. Indicate high temperature (>25°C) or high humidity (>60%RH) with a red blinking RGB LED at 1000ms intervals.
 //
 // Hardware Connection:
 // DHT11 Data Pin -> GPIO4
@@ -30,6 +30,7 @@
 // Testing and Validation Approach:
 // Test by monitoring the serial output and observing the RGB LED color changes under
 // different temperature and humidity conditions.
+//
 // **********************************
 // Libraries Import
 // **********************************
@@ -40,12 +41,12 @@
 // **********************************
 // Constants Declaration
 // **********************************
-#define FIRMWARE_AUTHOR "ESP32-C6 Coding Assistant"
-#define DHTPIN 4 // DHT11 data pin
-#define DHTTYPE DHT11
-#define LED_PIN 8 // WS2812B data pin
-#define NUM_LEDS 1 // Number of LEDs in the strip
-#define READ_INTERVAL 3000 // Sensor read interval in milliseconds
+#define DHTPIN 4                                   // DHT11 data pin
+#define DHTTYPE DHT11                              // Sensor type
+#define LED_PIN 8                                  // WS2812B data pin
+#define NUM_LEDS 1                                 // Number of LEDs in the strip
+#define READ_INTERVAL 3000                         // Sensor read interval in milliseconds
+#define BLINK_INTERVAL 1000                          // Blink interval for errors/high conditions
 
 Adafruit_NeoPixel strip(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 DHT dht(DHTPIN, DHTTYPE);
@@ -54,6 +55,8 @@ DHT dht(DHTPIN, DHTTYPE);
 // Variables Declaration
 // **********************************
 unsigned long lastReadTime = 0;
+unsigned long lastBlinkTime = 0;
+bool isHighCondition = false;                      // For high condition blinking
 
 // **********************************
 // Functions Definition
@@ -63,6 +66,7 @@ void displayColor(uint8_t red, uint8_t green, uint8_t blue) {
     strip.show();
 }
 
+// Function to convert Celsius to Fahrenheit
 float convertToFahrenheit(float celsius) {
     return celsius * 9.0 / 5.0 + 32;
 }
@@ -81,35 +85,45 @@ void setup() {
 // Loop() Function
 // **********************************
 void loop() {
-    if (millis() - lastReadTime > READ_INTERVAL) {
-        lastReadTime = millis();
+    unsigned long currentMillis = millis();
+
+    // Handle sensor reading every READ_INTERVAL
+    if (currentMillis - lastReadTime > READ_INTERVAL) {
+        lastReadTime = currentMillis;
         float humidity = dht.readHumidity();
         float tempC = dht.readTemperature();
-        float tempF = convertToFahrenheit(tempC);
+        float tempF = convertToFahrenheit(tempC); // Convert to Fahrenheit
 
         Serial.print("Humidity: ");
         Serial.print(humidity);
-        Serial.print("%, Temp: ");
+        Serial.print("%, Temperature: ");
         Serial.print(tempC);
         Serial.print("C ");
         Serial.print(tempF);
         Serial.println("F");
 
         if (isnan(humidity) || isnan(tempC)) {
-            // Blink red for sensor error
-            displayColor(255, 0, 0); // Red
-            delay(100);
-            displayColor(0, 0, 0); // Off
-            delay(100);
+            displayColor(255, 0, 0); // Steady red for sensor error
+            isHighCondition = false;
         } else if ((tempC >= 15 && tempC <= 25) && (humidity >= 10 && humidity <= 60)) {
-            // Steady green for normal condition
-            displayColor(0, 255, 0); // Green
+            displayColor(0, 255, 0); // Steady green for normal condition
+            isHighCondition = false;
         } else if (tempC < 15 || humidity < 10) {
-            // Steady blue for low condition
-            displayColor(0, 0, 255); // Blue
-        } else if (tempC > 25 || humidity > 60) {
-            // Steady red for high condition
-            displayColor(255, 0, 0); // Red
+            displayColor(0, 0, 255); // Steady blue for low condition
+            isHighCondition = false;
+        } else {
+            isHighCondition = true;
+            lastBlinkTime = currentMillis; // Reset blink timing
         }
+    }
+
+    // Handle blinking for high condition outside the main if condition to ensure continuous blinking
+    if (isHighCondition && (currentMillis - lastBlinkTime > BLINK_INTERVAL)) {
+        lastBlinkTime = currentMillis;
+        strip.setPixelColor(0, strip.Color(255, 0, 0));
+        strip.show();
+        delay(10); // Maintain red for a short period to ensure visibility
+        strip.clear(); // Turn off LED
+        strip.show();
     }
 }
