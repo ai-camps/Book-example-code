@@ -12,8 +12,8 @@ Requirements:
 5. High Temperature/Humidity Indication: If the temperature exceeds 25°C or the humidity exceeds 60%RH, change the RGB LED to a steady red color.
 
 Implementation Notes:
-- Refer the "ESP32-C6 Specifics" about the information of ESP32-C builtin addressable RGB LED and temperature sensor from the pre-defined instruction of the GPT “ESP32-C6 Coding Assistant”
-- Refer the "ESP32-C6-Pinout.txt" file for PIN definition from the "Knowledge" of the GPT “ESP32-C6 Coding Assistant”.
+- Refer to the "ESP32-C6 Specifics" for information about the ESP32-C built-in addressable RGB LED and temperature sensor. This information can be found in the pre-defined instructions of the GPT "ESP32-C6 Coding Assistant".
+- Refer to the "ESP32-C6-Pinout.txt" file for PIN definitions from the knowledge of the GPT "ESP32-C6 Coding Assistant".
 - Utilize appropriate libraries for interfacing with the DHT11 sensor.
 - Implement functions for reading sensor data, converting temperature to Fahrenheit, and controlling the RGB LED color.
 - Ensure that the program includes error handling for sensor communication issues.
