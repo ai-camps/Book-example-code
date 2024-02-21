@@ -1,78 +1,157 @@
 // **********************************
 // Code Explanation
 // **********************************
-// Created by: ESP32-C6 Coding Assistant
-// Creation Date: 2024-02-14
-//
 // Code Purpose:
-// This code is designed to control an RGB LED connected to an ESP32-C6, making it blink
-// in Red, Green, and Blue colors sequentially. It utilizes the Adafruit NeoPixel library
-// for easy control of the LED.
-//
+// This code demonstrates controlling the ESP32-C6's built-in RGB LED to cycle through colors,
+// showcasing structured coding practices and non-blocking execution.
+
+// Requirement:
+// 1. Utilize the built-in RGB LED for color display.
+// 2. Periodically print the current LED color.
+// 3. Display a steady red color and print "Error" on simulated sensor read error.
+// 4. Cycle colors with a non-blocking approach.
+
 // Hardware Connection:
-// RGB LED data pin to ESP32-C6 GPIO8 (Pin 9 as per ESP32-C6 Pinout)
-//
+// Built-in RGB LED on GPIO8.
+
+// New Created Functions:
+// - setupLED(): Initializes the built-in RGB LED.
+// - updateLED(): Cycles through colors in a non-blocking manner.
+
 // Security Considerations:
-// As this project involves basic LED control, the primary security consideration is
-// ensuring physical safety when connecting the LED and handling the ESP32-C6.
-//
-// Testing and Validation:
-// Verify correct LED operation by observing the sequential color changes. Ensure there
-// are no short circuits, and the LED is correctly connected to prevent damage to the ESP32-C6.
-//
+// - Monitor for consistent power supply to prevent malfunction.
+// - Implement error handling for robust operation.
+
+// Testing and Validation Approach:
+// - Validate color cycling under various conditions.
+// - Test error handling effectiveness.
+
 // **********************************
 // Libraries Import
 // **********************************
-#include <Arduino.h>
-#include <Adafruit_NeoPixel.h>
+#include <Arduino.h>           // Includes the main Arduino library for core functions.
+#include "Adafruit_NeoPixel.h" // Includes the Adafruit NeoPixel library for controlling RGB LEDs.
 
 // **********************************
-// Constants Declaration
+// Constants and Struct Declaration
 // **********************************
-#define FIRMWARE_AUTHOR "ESP32-C6 Coding Assistant" // Firmware author name
-#define PIN 8 // Pin number for the RGB LED, using GPIO8 as per ESP32-C6 pinout
-#define NUMPIXELS 1 // Number of pixels in the NeoPixel (just one in this case)
+#define LED_PIN 8                                                  // Defines the GPIO pin number connected to the RGB LED.
+#define LED_COUNT 1                                                // Defines the number of LEDs in the strip (just one for built-in RGB).
+int pixelIndex = 0;                                                // Specifies the index of the pixel to control in the NeoPixel strip (only one LED here).
+Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800); // Initializes the NeoPixel strip.
 
-Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
-
-// Define colors as presets (Red, Green, Blue)
-const uint32_t RED = pixels.Color(255, 0, 0); // Red color
-const uint32_t GREEN = pixels.Color(0, 255, 0); // Green color
-const uint32_t BLUE = pixels.Color(0, 0, 255); // Blue color
-
-// **********************************
-// Variables Declaration
-// **********************************
-// No additional global variables required for this basic example
+// Defines a struct for easy color management with predefined color values.
+struct Colors
+{
+  static const uint32_t redColor = 0xFF0000;   // Red color value.
+  static const uint32_t greenColor = 0x00FF00; // Green color value.
+  static const uint32_t blueColor = 0x0000FF;  // Blue color value.
+  static const uint32_t offColor = 0x000000;   // Represents the LED turned off.
+};
 
 // **********************************
-// Functions Definition
+// Class Declaration
 // **********************************
-// No additional functions required for this basic example
+// Defines a class for controlling the built-in RGB LED.
+// The class implements a non-blocking color cycling approach.
+// The class also implements error handling for sensor read failure.
+// **********************************
+
+// Declare a class to encapsulate LED control logic.
+class LedController
+{
+public:
+  // Constructor initializes the LED's current state, timing variables, and interval.
+  LedController() : currentLedState(GREEN), previousMillis(0), interval(1000) {}
+
+  // Method to correctly initialize timing for the first LED update.
+  void setup()
+  {
+    previousMillis = millis();
+  }
+
+  // Method to update the LED's color based on the current state.
+  void updateLed()
+  {
+    unsigned long currentMillis = millis(); // Capture the current time.
+    // Check if the interval has elapsed to change the LED color.
+    if (currentMillis - previousMillis >= interval)
+    {
+      previousMillis = currentMillis; // Update the timing for the next color change.
+      // Switch statement to update the LED color based on the current state.
+      switch (currentLedState)
+      {
+      case GREEN:
+        strip.setPixelColor(pixelIndex, Colors::greenColor); // Set LED to green.
+        Serial.println("Current LED color: Green");          // Log current color.
+        currentLedState = BLUE;                              // Move to the next color state.
+        break;
+      case BLUE:
+        strip.setPixelColor(pixelIndex, Colors::blueColor); // Set LED to blue.
+        Serial.println("Current LED color: Blue");          // Log current color.
+        currentLedState = RED;                              // Move to the next color state.
+        break;
+      case RED:
+        strip.setPixelColor(pixelIndex, Colors::redColor); // Set LED to red.
+        Serial.println("Current LED color: Red");          // Log current color.
+        currentLedState = GREEN;                           // Cycle back to the first color state.
+        break;
+      case ERROR:
+        strip.setPixelColor(pixelIndex, Colors::redColor); // Set LED to red to indicate an error.
+        Serial.println("Error: LED read failure");         // Log an error message.
+        break;
+      }
+      strip.show(); // Apply the color update to the LED.
+    }
+  }
+
+  // Method to simulate an error condition and demonstrate error handling.
+  void simulateError()
+  {
+    currentLedState = ERROR; // Set the state to ERROR.
+    updateLed();             // Update the LED to indicate the error.
+    currentLedState = GREEN; // Reset the state after showing the error.
+  }
+
+private:
+  // Enum to represent different LED states for color cycling and error indication.
+  enum LedState
+  {
+    GREEN,
+    BLUE,
+    RED,
+    ERROR
+  } currentLedState;
+  unsigned long previousMillis; // Tracks the last update time.
+  const long interval;          // Interval between color changes.
+};
+
+// Instantiate the LedController class to manage the LED.
+LedController ledController;
 
 // **********************************
-// Setup() Function
+// Setup Functions
 // **********************************
-void setup() {
-  pixels.begin(); // Initialize the NeoPixel library.
+void setup()
+{
+  Serial.begin(115200);  // Initializes serial communication at 115200 baud rate.
+  strip.begin();         // Initializes the NeoPixel strip.
+  strip.show();          // Clears the strip at startup (turns off all LEDs).
+  ledController.setup(); // Initialize the ledController timing.
 }
 
 // **********************************
-// Loop() Function
+// Loop Functions
 // **********************************
-void loop() {
-  // Set the pixel (LED) to red
-  pixels.setPixelColor(0, RED); // Pixel number, Color
-  pixels.show(); // Update the actual LED
-  delay(1000); // Wait for a second
+void loop()
+{
+  ledController.updateLed(); // Call the update method to cycle LED colors.
 
-  // Set the pixel (LED) to green
-  pixels.setPixelColor(0, GREEN);
-  pixels.show();
-  delay(1000); // Wait for a second
-
-  // Set the pixel (LED) to blue
-  pixels.setPixelColor(0, BLUE);
-  pixels.show();
-  delay(1000); // Wait for a second
+  // Below code simulates an error condition every 15 seconds as a demonstration.
+  static unsigned long lastErrorTime = 0; // Static variable to track the last error simulation time.
+  if (millis() - lastErrorTime > 15000)
+  {                                // Check if 15 seconds have passed.
+    ledController.simulateError(); // Simulate an error.
+    lastErrorTime = millis();      // Reset the timer for the next error simulation.
+  }
 }
