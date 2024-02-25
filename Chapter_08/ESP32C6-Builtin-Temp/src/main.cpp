@@ -1,6 +1,6 @@
 // **********************************
 // Code Created by: ESP32-C6 Coding Assistant
-// Creation Date: 2024-02-18
+// Creation Date: 2024-02-25
 // **********************************
 // Code Explanation
 // **********************************
@@ -30,41 +30,88 @@
 #include <Adafruit_NeoPixel.h>          // Library for controlling RGB LEDs, the built-in one on ESP32-C6
 #include <map>                          // Includes the map library for mapping alert types to their corresponding configurations.
 
-// Define constants for LED control
-#define LED_PIN 8     // Defines the pin number connected to the NeoPixel LED.
-#define STRIP_COUNT 1 // Defines the number of the strip
-#define BUZZER_PIN 4 // Defines the pin number connected to the buzzer.
+// Define constants for LED and buzzer control
+#define LED_PIN 8     // Pin number for the NeoPixel LED
+#define STRIP_COUNT 1 // Number of LEDs in the strip (1 for built-in)
+#define BUZZER_PIN 4  // Pin number for the buzzer
 
-int pixelIndex = 0;                // Index of the LED to control (only one in this case, so it's set to 0)
-unsigned long readInterval = 5000; // Interval for reading temperature
+// Global variables for temperature reading and LED blinking control
+int pixelIndex = 0;                // Index for the controlled LED (only one in this case)
+unsigned long readInterval = 5000; // Interval between temperature readings (milliseconds)
 unsigned long lastReadTime = 0;    // Timestamp of the last temperature reading
-unsigned long blinkInterval = 100; // Interval for LED blinking
-unsigned long lastBlinkTime = 0;   // tracking the last blink time
-bool ledBlinkState = false;        // blinking state tracking
+unsigned long blinkInterval = 500; // Blink interval for the LED (milliseconds)
+unsigned long lastBlinkTime = 0;   // Timestamp of the last LED blink
+bool ledBlinkState = false;        // Current state of LED blinking (on or off)
 
-float lowTempThreshold = 15.0;  // Threshold for considering temperature as low
-float highTempThreshold = 25.0; // Threshold for considering temperature as high
+// Temperature thresholds for indicating different states
+float lowTempThreshold = 15.0;  // Threshold for low temperature
+float highTempThreshold = 25.0; // Threshold for high temperature
 
-// Class to control the LED for visual alerts
-class LEDController
-{
+class BuzzerController {
+private:
+    int buzzerPin; // Pin attached to the buzzer
+
+    // Structure for buzzer configuration (frequency and duration)
+    struct BuzzerAlertConfig {
+        int frequency;
+        int duration;
+    };
+
+public:
+    enum AlertType {
+        ALERT_MUTE,   // No sound
+        ALERT_LOW,    // Low temperature alert
+        ALERT_MEDIUM, // Medium temperature alert
+        ALERT_HIGH,   // High temperature alert
+        ALERT_ERROR   // Sensor error alert
+    };
+
+    std::map<AlertType, BuzzerAlertConfig> alertConfigs; // Maps alert types to configurations
+
+    // Constructor initializes the buzzer pin and default configurations
+    BuzzerController(int pin) : buzzerPin(pin) {
+        pinMode(buzzerPin, OUTPUT); // Set the buzzer pin as an output
+
+        // Initialize default configurations for each alert type
+        alertConfigs[ALERT_MUTE] = {0, 0};
+        alertConfigs[ALERT_LOW] = {1000, 100};
+        alertConfigs[ALERT_MEDIUM] = {2000, 200};
+        alertConfigs[ALERT_HIGH] = {3000, 300};
+        alertConfigs[ALERT_ERROR] = {250, 1000};
+    }
+
+    // Plays a beep sound based on the specified alert type
+    void beep(AlertType type) {
+        if (type == ALERT_MUTE || alertConfigs.find(type) == alertConfigs.end()) {
+            noTone(buzzerPin); // Stop any ongoing tone
+        } else {
+            BuzzerAlertConfig config = alertConfigs[type];
+            tone(buzzerPin, config.frequency, config.duration);
+        }
+    }
+
+    // Stops any ongoing tone, effectively muting the buzzer
+    void mute() {
+        noTone(buzzerPin);
+    }
+};
+
+class LEDController {
 private:
     Adafruit_NeoPixel strip;         // NeoPixel strip object
-    bool ledState = false;           // Tracks the current LED state (on/off) for blinking
+    bool ledState = false;           // Current LED state (on/off) for blinking
     unsigned long lastBlinkTime = 0; // Timestamp of the last blink action
 
 public:
-    enum class Colors // Enum for LED colors
-    {
-        Red = 0xFF0000,   // Color value for red
-        Green = 0x00FF00, // Color value for green
-        Blue = 0x0000FF,  // Color value for blue
-        Off = 0x000000    // Color value for LED off (black/no color)
+    enum class Colors {
+        Red = 0xFF0000,
+        Green = 0x00FF00,
+        Blue = 0x0000FF,
+        Off = 0x000000 // Represents the LED turned off
     };
-
-    String getCurrentColor() // Returns the current color as a string.
+    String getCurrentLEDColor() // Returns the current color as a string.
     {
-        switch (currentColor)
+        switch (currentLEDColor)
         {
         case Colors::Red:
             return "Red";
@@ -78,203 +125,134 @@ public:
             return "Unknown";
         }
     }
+    // Current color of the LED, initialized to off
+    Colors currentLEDColor = Colors::Off;
 
-    Colors currentColor = Colors::Off; // Current color of the LED
-
+    // Constructor initializes the NeoPixel strip
     LEDController(uint8_t pin, uint8_t count) : strip(Adafruit_NeoPixel(count, pin, NEO_GRB + NEO_KHZ800)) {}
 
-    void begin()
-    {
+    // Initializes the LED strip
+    void begin() {
         strip.begin();
-        strip.show(); // Ensure the LED is off initially
+        strip.show(); // Turn off the LED initially
     }
 
-    void setColor(Colors color) // Method to set the LED color
-    {
-        currentColor = color; // Update the current color
-        if (color != Colors::Off)
-        {
-            strip.fill(static_cast<uint32_t>(color), 0, STRIP_COUNT);
+    // Sets the LED color
+    void setColor(Colors color) {
+        currentLEDColor = color; // Update the current LED color
+        strip.fill(static_cast<uint32_t>(color), 0, STRIP_COUNT); // Set the color on the strip
+        strip.show(); // Apply the color change
+    }
+
+    // Handles the blinking logic for the LED based on the specified color
+    void handleBlink(Colors blinkColor, unsigned long currentMillis, BuzzerController &buzzer) {
+        // Only proceed if blinking is necessary (currentColor matches blinkColor or ledState is true)
+        if (currentLEDColor != blinkColor && !ledState) return;
+
+        if (currentMillis - lastBlinkTime >= blinkInterval) { // Check if it's time to toggle the blink state
+            lastBlinkTime = currentMillis; // Update the last blink time
+            ledState = !ledState; // Toggle the LED state
+
+            // Set the LED color based on the current blink state
             strip.show();
-        }
-    }
-
-    // Method to handle blinking logic
-    void handleBlink(Colors blinkColor, unsigned long currentMillis) // Updated to be non-blocking
-    {
-        if (currentColor == blinkColor) // Check if the current color matches the blinking color
-        {
-            if (currentMillis - lastBlinkTime >= blinkInterval) // Check if the blink interval has passed
-            {
-                lastBlinkTime = currentMillis; // Update the last blink time
-                ledState = !ledState;          // Toggle the state
-                strip.fill(ledState ? static_cast<uint32_t>(blinkColor) : static_cast<uint32_t>(Colors::Off), 0, STRIP_COUNT);
-                strip.show();
+            strip.fill(ledState ? static_cast<uint32_t>(blinkColor) : static_cast<uint32_t>(Colors::Off), 0, STRIP_COUNT);
+            strip.show();
+            
+            // Control the buzzer based on the LED state
+            if (ledState) {
+                buzzer.beep(BuzzerController::ALERT_HIGH); // Beep when the LED is on
+            } else {
+                buzzer.mute(); // Mute the buzzer when the LED is off
             }
         }
-        else
-        {
-            // If not blinking, ensure LED color matches the current state
-            setColor(currentColor);
-        }
     }
 };
 
-// Class to control the buzzer for auditory alerts.
-class BuzzerController
-{
+class TemperatureSensor {
 private:
-    int buzzerPin; // Pin number attached to the buzzer.
-
-    // Nested structure for buzzer configuration
-    struct BuzzerAlertConfig
-    {
-        int frequency; // Frequency for the beep
-        int duration;  // Duration for the beep
-    };
+    temperature_sensor_handle_t tsens; // Handle for the temperature sensor
+    float lowThreshold;                // Low temperature threshold
+    float highThreshold;               // High temperature threshold
 
 public:
-    // Enum to define different alert types
-    enum AlertType
-    {
-        ALERT_MUTE,   // Mute alert type
-        ALERT_LOW,    // Low alert type
-        ALERT_MEDIUM, // Medium alert type
-        ALERT_HIGH,   // High alert type
-        ALERT_ERROR   // Error alert type
-    };
-    // Map each alert type to its corresponding BuzzerAlertConfig
-    std::map<AlertType, BuzzerAlertConfig> alertConfigs;
-
-    // Constructor that initializes the buzzer pin
-    BuzzerController(int pin) : buzzerPin(pin)
-    {
-        // Initialize the buzzer pin
-        pinMode(buzzerPin, OUTPUT);
-
-        // Default configurations for different alert types
-        alertConfigs[ALERT_MUTE] = {0, 0};        // Mute alert type, 0 Hz frequency, 0 ms duration
-        alertConfigs[ALERT_LOW] = {1000, 100};    // Low alert type, 1000 Hz frequency, 100 ms duration
-        alertConfigs[ALERT_MEDIUM] = {2000, 200}; // Medium alert type, 2000 Hz frequency, 200 ms duration
-        alertConfigs[ALERT_HIGH] = {3000, 300};   // High alert type, 3000 Hz frequency, 300 ms duration
-        alertConfigs[ALERT_ERROR] = {250, 1000};  // Error alert type, 250 Hz frequency, 1000 ms duration
-    }
-
-    // Function to set configuration for a specific alert type
-    void setConfig(AlertType type, int frequency, int duration)
-    {
-        alertConfigs[type] = {frequency, duration};
-    }
-
-    // Function to trigger a beep for a specific alert type
-    void beep(AlertType type)
-    {
-        if (type == ALERT_MUTE || alertConfigs.find(type) == alertConfigs.end())
-        {
-            noTone(buzzerPin); // Stop any ongoing tone if mute is selected or type not found
-        }
-        else
-        {
-            BuzzerAlertConfig config = alertConfigs[type];
-            tone(buzzerPin, config.frequency, config.duration);
-        }
-    }
-};
-
-// Class to encapsulate temperature sensing and LED indication logic
-class TemperatureSensor
-{
-private:
-    temperature_sensor_handle_t tsens; // Temperature sensor handle
-    float lowThreshold;                // Custom low temperature threshold
-    float highThreshold;               // Custom high temperature threshold
-
-public:
-    enum TemperatureState
-    { // Enumeration to represent different temperature states
+    enum TemperatureState {
         Normal,
         Low,
         High,
         Error
     };
 
-    TemperatureSensor(float lowThreshold, float highThreshold) // Constructor with custom temperature thresholds
-        : lowThreshold(lowThreshold), highThreshold(highThreshold)
-    {
-        // Initialize the temperature sensor here or in a separate init method
-        temperature_sensor_config_t tsens_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(-10, 80); // Default configuration
-        esp_err_t result = temperature_sensor_install(&tsens_config, &tsens);                  // Install the temperature sensor
-        if (result == ESP_OK)
-        {
+    // Constructor with custom temperature thresholds
+    TemperatureSensor(float lowThreshold, float highThreshold)
+        : lowThreshold(lowThreshold), highThreshold(highThreshold) {
+        temperature_sensor_config_t tsens_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(-10, 80);
+        esp_err_t result = temperature_sensor_install(&tsens_config, &tsens);
+
+        if (result == ESP_OK) {
             result = temperature_sensor_enable(tsens);
-            if (result != ESP_OK)
-            {
-                Serial.println("Failed to enable temperature sensor");
+            if (result != ESP_OK) {
+                Serial.println("Failed to enable temperature sensor. Check hardware connections.");
             }
-        }
-        else
-        {
-            Serial.println("Failed to initialize temperature sensor");
+        } else {
+            Serial.println("Failed to initialize temperature sensor. Check hardware connections.");
         }
     }
 
-    float readTemperature()
-    {                                                                           // Method to read the temperature from the sensor
-        float temperature = 0.0;                                                // Variable to store the temperature reading
-        esp_err_t result = temperature_sensor_get_celsius(tsens, &temperature); // Get the temperature reading
-        if (result != ESP_OK)
-        {
-            Serial.println("Failed to read temperature");
+    // Reads the temperature from the sensor
+    float readTemperature() {
+        static unsigned long lastErrorTime = 0; // Timestamp of the last sensor error
+        if (millis() - lastErrorTime < 6000) { // Wait for 60 seconds after an error
+            Serial.println("Waiting for sensor cooldown...");
+            return NAN;
+        }
+
+        float temperature = 0.0;
+        esp_err_t result = temperature_sensor_get_celsius(tsens, &temperature);
+
+        if (result != ESP_OK) {
+            lastErrorTime = millis(); // Update the last error time
+            Serial.println("Failed to read temperature. Entering cooldown.");
             return NAN;
         }
         return temperature;
     }
 
-    TemperatureState getTemperatureState(float temperature)
-    { // Method to determine the temperature state
-        if (isnan(temperature))
-        {
-            return Error;
-        }
-        else if (temperature < lowThreshold)
-        {
-            return Low;
-        }
-        else if (temperature > highThreshold)
-        {
-            return High;
-        }
-        else
-        {
-            return Normal;
+    // Determines the state of the temperature (Normal, Low, High, Error)
+    TemperatureState getTemperatureState(float temperature) {
+        if (isnan(temperature)) {
+            return Error; // Temperature read failure
+        } else if (temperature < lowThreshold) {
+            return Low; // Low temperature
+        } else if (temperature > highThreshold) {
+            return High; // High temperature
+        } else {
+            return Normal; // Normal temperature
         }
     }
 };
 
-// Global objects for LED, buzzer, and temperature sensor control
-LEDController ledController(LED_PIN, STRIP_COUNT);                 // LED controller object
-BuzzerController buzzerController(BUZZER_PIN);                     // Buzzer controller object
-TemperatureSensor tempSensor(lowTempThreshold, highTempThreshold); // Temperature sensor object
+// Global objects for controlling the LED, buzzer, and temperature sensor
+LEDController ledController(LED_PIN, STRIP_COUNT);
+BuzzerController buzzerController(BUZZER_PIN);
+TemperatureSensor tempSensor(lowTempThreshold, highTempThreshold);
 
-void setup()
-{
-    Serial.begin(115200);
-    ledController.begin();         // Initialize the LED controller
-    ESP32Info::initializeSerial(); // Initialize the serial connection
-    ESP32Info::printChipInfo();    // Print the chip information
+void setup() {
+    Serial.begin(115200); // Initialize serial communication
+    ledController.begin(); // Initialize the LED controller
+    ESP32Info::initializeSerial(); // Initialize serial connection for ESP32 information
+    ESP32Info::printChipInfo(); // Print information about the ESP32-C6 chip
 }
 
-void loop()
-{
-    unsigned long currentMillis = millis(); // Get the current time
+void loop() {
+    unsigned long currentMillis = millis(); // Get the current system time
 
-    if (currentMillis - lastReadTime >= readInterval)
-    {                                 // If it's time for another reading
-        lastReadTime = currentMillis; // Update the last reading timestamp
+    // Periodically read the temperature and update the LED and buzzer accordingly
+    if (currentMillis - lastReadTime >= readInterval) {
+        lastReadTime = currentMillis; // Update the last read time
 
-        float temperatureC = tempSensor.readTemperature();                                        // Read the temperature in Celsius
-        float temperatureF = temperatureC * 9 / 5 + 32;                                           // Convert to Fahrenheit
-        TemperatureSensor::TemperatureState state = tempSensor.getTemperatureState(temperatureC); // Get the temperature state
+        float temperatureC = tempSensor.readTemperature(); // Read temperature in Celsius
+        float temperatureF = temperatureC * 9 / 5 + 32; // Convert to Fahrenheit
+        TemperatureSensor::TemperatureState state = tempSensor.getTemperatureState(temperatureC); // Determine temperature state
 
         // Print the temperature readings
         Serial.print("Temperature: ");
@@ -283,30 +261,30 @@ void loop()
         Serial.print(temperatureF);
         Serial.print(" °F, ");
 
-        switch (state)
-        {
-        case TemperatureSensor::Low:                             // Update the temperature state and LED based on the reading
-            ledController.setColor(LEDController::Colors::Blue); // Set the LED color to blue
-            buzzerController.beep(BuzzerController::ALERT_LOW);
-            break;
-        case TemperatureSensor::High:
-            ledController.setColor(LEDController::Colors::Red); // Will blink in handleBlink
-            buzzerController.beep(BuzzerController::ALERT_HIGH);
-            break;
-        case TemperatureSensor::Normal:
-            ledController.setColor(LEDController::Colors::Green); // Set the LED color to green
-            buzzerController.beep(BuzzerController::ALERT_MEDIUM);
-            break;
-        case TemperatureSensor::Error:
-            ledController.setColor(LEDController::Colors::Red); // Set the LED color to red
-            buzzerController.beep(BuzzerController::ALERT_ERROR);
-            break;
+        // Update LED and buzzer based on temperature state
+        switch (state) {
+            case TemperatureSensor::Low:
+                ledController.setColor(LEDController::Colors::Blue); // Set LED to blue
+                buzzerController.beep(BuzzerController::ALERT_LOW); // Low temperature alert
+                break;
+            /* case TemperatureSensor::High:
+                ledController.setColor(LEDController::Colors::Red); // Set LED to blink red
+                buzzerController.beep(BuzzerController::ALERT_HIGH); // High temperature alert
+                break; */
+            case TemperatureSensor::Normal:
+                ledController.setColor(LEDController::Colors::Green); // Set LED to green
+                buzzerController.beep(BuzzerController::ALERT_MUTE); // Medium temperature alert (no sound)    
+                break;
+            case TemperatureSensor::Error:
+                ledController.setColor(LEDController::Colors::Red); // Set LED to steady red
+                buzzerController.beep(BuzzerController::ALERT_ERROR); // Sensor error alert
+                break;
         }
 
         // Print the current color after setting it
-        Serial.println("Current LED Color: " + ledController.getCurrentColor());
+        Serial.println("Current LED Color: " + ledController.getCurrentLEDColor());
     }
 
-    // Call handleBlink regardless of the temperature reading logic
-    ledController.handleBlink(LEDController::Colors::Red, currentMillis);
+    // Handle LED blinking independently of temperature reading
+    ledController.handleBlink(LEDController::Colors::Red, currentMillis, buzzerController);
 }
