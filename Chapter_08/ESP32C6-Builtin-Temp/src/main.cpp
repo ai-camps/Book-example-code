@@ -25,24 +25,25 @@
 // Test the code across various temperatures to ensure accurate sensor readings and correct LED feedback.
 
 #include <Arduino.h>                    // Core Arduino library for basic functions and types
+#include <ESP32Info.h>                  // Library for accessing ESP32-C6 hardware information
 #include "builtin_temperature_sensor.h" // Library for accessing the ESP32-C6's built-in temperature sensor
-#include <Adafruit_NeoPixel.h>          // Library for controlling RGB LEDs, including the built-in one on ESP32-C6
+#include <Adafruit_NeoPixel.h>          // Library for controlling RGB LEDs, the built-in one on ESP32-C6
 #include <map>                          // Includes the map library for mapping alert types to their corresponding configurations.
 
 // Define constants for LED control
 #define LED_PIN 8     // Defines the pin number connected to the NeoPixel LED.
 #define STRIP_COUNT 1 // Defines the number of the strip
-#define BUZZER_PIN 10 // Defines the pin number connected to the buzzer.
+#define BUZZER_PIN 4 // Defines the pin number connected to the buzzer.
 
-int pixelIndex = 0;                       // Index of the LED to control (only one in this case, so it's set to 0)
-static temperature_sensor_handle_t tsens; // Temperature sensor handle
-float lowTempThreshold = 10.0;            // Threshold for considering temperature as low
-float highTempThreshold = 20.0;           // Threshold for considering temperature as high
-unsigned long readInterval = 5000;        // Interval for reading temperature
-unsigned long lastReadTime = 0;           // Timestamp of the last temperature reading
-unsigned long blinkInterval = 100;        // Interval for LED blinking
-unsigned long lastBlinkTime = 0;          // tracking the last blink time
-bool ledBlinkState = false;               // blinking state tracking
+int pixelIndex = 0;                // Index of the LED to control (only one in this case, so it's set to 0)
+unsigned long readInterval = 5000; // Interval for reading temperature
+unsigned long lastReadTime = 0;    // Timestamp of the last temperature reading
+unsigned long blinkInterval = 100; // Interval for LED blinking
+unsigned long lastBlinkTime = 0;   // tracking the last blink time
+bool ledBlinkState = false;        // blinking state tracking
+
+float lowTempThreshold = 15.0;  // Threshold for considering temperature as low
+float highTempThreshold = 25.0; // Threshold for considering temperature as high
 
 // Class to control the LED for visual alerts
 class LEDController
@@ -258,7 +259,9 @@ TemperatureSensor tempSensor(lowTempThreshold, highTempThreshold); // Temperatur
 void setup()
 {
     Serial.begin(115200);
-    ledController.begin();
+    ledController.begin();         // Initialize the LED controller
+    ESP32Info::initializeSerial(); // Initialize the serial connection
+    ESP32Info::printChipInfo();    // Print the chip information
 }
 
 void loop()
@@ -284,15 +287,19 @@ void loop()
         {
         case TemperatureSensor::Low:                             // Update the temperature state and LED based on the reading
             ledController.setColor(LEDController::Colors::Blue); // Set the LED color to blue
+            buzzerController.beep(BuzzerController::ALERT_LOW);
             break;
         case TemperatureSensor::High:
             ledController.setColor(LEDController::Colors::Red); // Will blink in handleBlink
+            buzzerController.beep(BuzzerController::ALERT_HIGH);
             break;
         case TemperatureSensor::Normal:
             ledController.setColor(LEDController::Colors::Green); // Set the LED color to green
+            buzzerController.beep(BuzzerController::ALERT_MEDIUM);
             break;
         case TemperatureSensor::Error:
             ledController.setColor(LEDController::Colors::Red); // Set the LED color to red
+            buzzerController.beep(BuzzerController::ALERT_ERROR);
             break;
         }
 
