@@ -5,53 +5,77 @@ void setup() {
   Serial.begin(115200);
   // Give some time for the serial monitor to start
   delay(1000);
+}
 
-  Serial.println("ESP32 Chip information:");
+void loop() {
+  Serial.println("\nESP32 Chip information:");
 
-  // Print the CPU model
-  Serial.print("Model: ");
+  Serial.print("Chip Model: ");
   Serial.println(ESP.getChipModel());
 
-  // Print the CPU revision
-  Serial.print("Revision: ");
+  Serial.print("Chip Revision: ");
   Serial.println(ESP.getChipRevision());
 
-  // Print the number of cores
+  Serial.print("SDK Version: ");
+  Serial.println(ESP.getSdkVersion());
+
   Serial.print("Number of Cores: ");
   Serial.println(ESP.getChipCores());
 
-  // Print the CPU frequency
   Serial.print("CPU Frequency: ");
   Serial.print(ESP.getCpuFreqMHz());
   Serial.println(" MHz");
 
-  // Print the size of flash memory
-  Serial.print("Flash Chip Size: ");
-  Serial.print(ESP.getFlashChipSize() / (1024 * 1024));
-  Serial.println(" MB");
+  Serial.print("Max CPU Frequency: ");
+  Serial.print(ESP.getCpuFreqMHz());
+  Serial.println(" MHz");
 
-  // Print the speed of the flash memory
+  Serial.print("Flash Chip Size: ");
+  Serial.print(ESP.getFlashChipSize());
+  Serial.println(" bytes");
+
   Serial.print("Flash Chip Speed: ");
   Serial.print(ESP.getFlashChipSpeed());
   Serial.println(" Hz");
 
-  // Print the size of the sketch
+  Serial.print("PSRAM Size: ");
+  Serial.print(ESP.getPsramSize());
+  Serial.println(" bytes");
+
+  Serial.print("Free PSRAM: ");
+  Serial.print(ESP.getFreePsram());
+  Serial.println(" bytes");
+
   Serial.print("Sketch Size: ");
   Serial.print(ESP.getSketchSize());
   Serial.println(" bytes");
 
-  // Print the amount of free space on the flash memory
   Serial.print("Free Sketch Space: ");
   Serial.print(ESP.getFreeSketchSpace());
   Serial.println(" bytes");
 
-  // Print the amount of free heap memory (in bytes)
-  Serial.print("Free Heap Size: ");
+  Serial.print("Heap Size: ");
+  Serial.print(ESP.getHeapSize());
+  Serial.println(" bytes");
+
+  Serial.print("Free Heap: ");
   Serial.print(ESP.getFreeHeap());
   Serial.println(" bytes");
 
+  Serial.print("Min Free Heap: ");
+  Serial.print(ESP.getMinFreeHeap());
+  Serial.println(" bytes");
+
+  Serial.print("Max Alloc Heap: ");
+  Serial.print(ESP.getMaxAllocHeap());
+  Serial.println(" bytes");
+
+  FlashMode_t flashMode = ESP.getFlashChipMode();
+  Serial.print("Flash Chip Mode: ");
+  Serial.println(flashMode == FM_QIO ? "QIO" : flashMode == FM_QOUT ? "QOUT" : flashMode == FM_DIO ? "DIO" : "DOUT");
+
   // Print the MAC address of the ESP32
-  Serial.print("MAC Address: ");
+  Serial.print("WiFi MAC Address: ");
   Serial.println(WiFi.macAddress());
 
   // Print the eFuse MAC address
@@ -68,16 +92,18 @@ void setup() {
   Serial.print("eFuse MAC: ");
   Serial.println(macStr);
 
-  // Print the SDK Version
-  Serial.print("SDK Version: ");
-  Serial.println(ESP.getSdkVersion());
+#ifdef ESP32
+  float tempF = temperatureRead(); // Assume temperatureRead() returns temperature in Fahrenheit
+  float tempC = (tempF - 32) * 5.0 / 9.0; // Convert Fahrenheit to Celsius
 
-  // Flash Mode
-  FlashMode_t ideMode = ESP.getFlashChipMode();
-  Serial.print("Flash Chip Mode: ");
-  Serial.println((ideMode == FM_QIO) ? "QIO" : (ideMode == FM_QOUT) ? "QOUT" : (ideMode == FM_DIO) ? "DIO" : "DOUT");
+  Serial.print("Temperature: ");
+  Serial.print(tempC);
+  Serial.print(" Celsius, ");
+  Serial.print(tempF);
+  Serial.println(" Fahrenheit");
+#endif
 
-}
-void loop() {
-  // put your main code here, to run repeatedly:
+
+  // Add a delay to prevent flooding the serial output.
+  delay(10000); // Wait for 10 seconds before the next printout
 }
