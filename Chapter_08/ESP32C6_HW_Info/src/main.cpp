@@ -1,9 +1,10 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 
 void setup() {
   Serial.begin(115200);
-  // Give some time for the serial monitor to start
+  // Give some time for the Serial monitor to start
   delay(1000);
 }
 
@@ -93,8 +94,8 @@ void loop() {
   Serial.println(macStr);
 
 #ifdef ESP32
-  float tempF = temperatureRead(); // Assume temperatureRead() returns temperature in Fahrenheit
-  float tempC = (tempF - 32) * 5.0 / 9.0; // Convert Fahrenheit to Celsius
+  float tempC = temperatureRead(); // Assume temperatureRead() returns temperature in Fahrenheit
+  float tempF = (tempC * 9.0 / 5.0) + 32; // Convert Fahrenheit to Celsius
 
   Serial.print("Temperature: ");
   Serial.print(tempC);
@@ -104,6 +105,6 @@ void loop() {
 #endif
 
 
-  // Add a delay to prevent flooding the serial output.
+  // Add a delay to prevent flooding the Serial output.
   delay(10000); // Wait for 10 seconds before the next printout
 }
