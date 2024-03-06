@@ -32,7 +32,7 @@ Let's design a local application logic as follows:
 2. ***Sensor Data Reading:** Regularly read the DHT11 sensor's temperature and humidity data, and print it out locally in both Celsius and Fahrenheit.*
 3. ***LED Feedback for Sensor Error:** If no data is read from the DHT11 sensor (indicating a read error), LED D5 should display a steady red color, the Piezo Buzzer should beep at a lower pitch, and "Sensor Error!" should be printed locally.*
 4. ***Normal Condition Indication:** If the temperature and humidity data fall between the minimum and maximum values, LED D4 turns off, and the Piezo Buzzer remains muted.*
-5. ***Abnormal Condition Indication:**If the temperature and humidity data fall outside the normal range, the LED D4 blinks red, and the Piezo Buzzer beeps at a higher pitch.*
+5. ***Abnormal Condition Indication:** If the temperature and humidity data fall outside the normal range, the LED D4 blinks red, and the Piezo Buzzer beeps at a higher pitch.*
 
 ***Implementation Guidance:***
 
