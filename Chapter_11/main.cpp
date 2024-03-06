@@ -1,37 +1,33 @@
 // **********************************
-// Created by: ESP32-C3 Coding Assistant
-// Creation Date: 2024-03-07
+// Created by: ESP32 Coding Assistant
+// Creation Date: 2024-03-06
 // **********************************
 // Code Explanation
 // **********************************
 // Code Purpose:
-// This program is designed to work with the ESP32-C3 module to read temperature and humidity data from a DHT11 sensor,
-// and provide visual and audible alerts based on predefined conditions. It visually indicates the range of the
-// temperature and humidity data using LEDs and signals any system errors or out-of-range conditions.
-//
+// This code is designed to periodically read temperature and humidity data from a DHT11 sensor
+// and provide visual and sound indications based on the data's normality or abnormality, 
+// and handle sensor reading errors.
 // Requirement Summary:
-// 1. Connect a DHT11 sensor to Pin 2 (IO02) to read temperature and humidity.
-// 2. Use a Piezo Buzzer connected to Pin 3 (IO03) for audible alerts.
-// 3. Visual indications through LEDs for sensor data range and errors.
-//
+// - Periodically read from DHT11 sensor connected to IO2.
+// - Indicate conditions via LEDs and Piezo Buzzer connected to IO11, IO12, and IO13.
 // Hardware Connection:
-// - DHT11 Data Pin connected to GPIO2 (IO02).
-// - Piezo Buzzer connected to GPIO11 (IO11).
-// - LED for Temperature & Humidity Range (Visual indication) connected to GPIO12 (IO12).
-// - LED for Error Indication connected to GPIO13 (IO13).
-//
+// - DHT11 data pin -> IO2
+// - Piezo Buzzer -> IO11
+// - LED D4 (normal condition indicator) -> IO12
+// - LED D5 (error indicator) -> IO13
 // New Created Function/Class:
-// - DHT sensor handling for temperature and humidity reading.
-// - Non-blocking LED control for visual feedback.
-// - Non-blocking Buzzer control for audible alerts.
-//
+// - checkSensorReadings()
+// - indicateNormalCondition()
+// - indicateAbnormalCondition()
+// - indicateSensorError()
+// - ledBlinking
 // Security Considerations:
-// Implement error handling for the sensor to ensure reliability.
-// Validate sensor data to prevent incorrect alerts.
-//
+// - Ensure stable power supply to prevent erroneous readings.
+// - Avoid exposing the sensor to extreme conditions beyond its operating range.
 // Testing and Validation Approach:
-// The code should be tested with varying environmental conditions to ensure accurate temperature and humidity readings,
-// and appropriate LED and Buzzer responses to those readings and error conditions.
+// - Test under known temperature and humidity conditions to validate sensor readings.
+// - Simulate error conditions by disconnecting the sensor.
 // **********************************
 // Libraries Import
 // **********************************
