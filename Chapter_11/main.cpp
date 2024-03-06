@@ -11,7 +11,7 @@
 //
 // Requirement Summary:
 // 1. Connect a DHT11 sensor to Pin 2 (IO02) to read temperature and humidity.
-// 2. Use a Piezo Buzzer connected to Pin 3 (IO11) for audible alerts.
+// 2. Use a Piezo Buzzer connected to Pin 3 (IO03) for audible alerts.
 // 3. Visual indications through LEDs for sensor data range and errors.
 //
 // Hardware Connection:
@@ -23,6 +23,7 @@
 // New Created Function/Class:
 // - DHT sensor handling for temperature and humidity reading.
 // - Non-blocking LED control for visual feedback.
+// - Non-blocking Buzzer control for audible alerts.
 //
 // Security Considerations:
 // Implement error handling for the sensor to ensure reliability.
@@ -56,7 +57,7 @@ const float HUM_MAX = 60.0;  // Maximum normal humidity
 // Variables Declaration
 // **********************************
 DHT dht(DHTPIN, DHTTYPE);                // DHT sensor object
-unsigned long sensorReadInterval = 5000; // Time interval for sensor readings in milliseconds
+unsigned long sensorReadInterval = 3000; // Time interval for sensor readings in milliseconds
 unsigned long lastCheckTime = 0;         // Time of the last sensor reading
 
 // Blink control variables
@@ -64,15 +65,16 @@ bool ledIndicatorState = LOW;    // Indicates whether the LED should be blinking
 unsigned long lastBlinkTime = 0; // Timestamp of the last LED blink toggle.
 const long blinkInterval = 100;  // Interval for LED blinking in milliseconds.
 bool ledState = LOW;             // Current state of the LED, initialized to OFF.
+bool isSensorError = false;      // Indicates whether a sensor error has occurred.
 
 // **********************************
 // Functions or Class Declaration
 // **********************************
-void manageBlinking(unsigned long currentMillis); // Manages non-blocking blinking of the LED.
-void checkSensorReadings();                       // Reads sensor data and updates indicators accordingly.
-void indicateNormalCondition();                   // Handles indicators for normal sensor readings.
-void indicateAbnormalCondition();                 // Handles indicators for out-of-range sensor readings.
-void indicateSensorError();                       // Handles indicators for sensor errors.
+void ledBlinking(unsigned long currentMillis); // Manages non-blocking blinking of the LED.
+void checkSensorReadings();                    // Reads sensor data and updates indicators accordingly.
+void indicateNormalCondition();                // Handles indicators for normal sensor readings.
+void indicateAbnormalCondition();              // Handles indicators for out-of-range sensor readings.
+void indicateSensorError();                    // Handles indicators for sensor errors.
 
 // **********************************
 // Setup Function
@@ -102,7 +104,7 @@ void loop()
   }
 
   // Call manageBlinking to handle the LED blinking logic.
-  manageBlinking(currentMillis);
+  ledBlinking(currentMillis);
 }
 
 // Reads humidity and temperature from the DHT sensor, displays them, and updates indicator LEDs.
@@ -151,8 +153,9 @@ void indicateNormalCondition()
 // Updates indicators to reflect abnormal sensor reading conditions and starts LED blinking.
 void indicateAbnormalCondition()
 {
-  digitalWrite(LED_ERROR_INDICATOR, LOW); // Ensure the error indicator is off.
-  ledIndicatorState = true;               // Start LED blinking.
+  digitalWrite(LED_ERROR_INDICATOR, LOW);         // Ensure the error indicator is off.
+  ledIndicatorState = true;                       // Start LED blinking.
+  Serial.println("Abnormal Condition Detected!"); // Print "Abnormal Condition Detected" message to the serial monitor
 }
 
 // Updates indicators to reflect a sensor error condition.
@@ -160,14 +163,14 @@ void indicateSensorError()
 {
   digitalWrite(LED_RANGE_INDICATOR, LOW);  // Ensure the range indicator is off.
   digitalWrite(LED_ERROR_INDICATOR, HIGH); // Turn on the error indicator LED.
-  tone(BUZZER_PIN, 2000);                   // Emit a high-pitch tone to indicate an error.
-  ledIndicatorState = false;               // Stop LED blinking
-  // Print "Sensor Error" message to the serial monitor
-  Serial.println("Sensor Error!");
+  tone(BUZZER_PIN, 5000);                  // Emit a high-pitch tone to indicate an error.
+  ledIndicatorState = false;               // Stop LED blinking.
+  isSensorError = true;                    // Set the sensor error flag.
+  Serial.println("Sensor Error!");         // Print "Sensor Error" message to the serial monitor
 }
 
 // Manages the non-blocking blinking of the LED and synchronizes the buzzer.
-void manageBlinking(unsigned long currentMillis)
+void ledBlinking(unsigned long currentMillis)
 {
   if (ledIndicatorState && (currentMillis - lastBlinkTime >= blinkInterval))
   {
@@ -188,7 +191,10 @@ void manageBlinking(unsigned long currentMillis)
   }
   else if (!ledIndicatorState)
   {
-    // Ensure the buzzer is off when the LED is not supposed to blink.
-    noTone(BUZZER_PIN);
+    // Turn off the buzzer if not blinking and no sensor error
+    if (!isSensorError)
+    {
+      noTone(BUZZER_PIN);
+    }
   }
 }
