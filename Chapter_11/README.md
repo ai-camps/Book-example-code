@@ -1,53 +1,96 @@
 ### Local Application Logic
 
-Let's design a local application logic as follows:
-
 1. The ESP32-C3 periodically retrieves temperature and humidity data from the DHT11 sensor.
 2. The retrieved data is checked against a pre-defined normal range.
-3. If the data is within the normal range, LED D4 (IO12) is turned off.
-4. If the data exceeds the normal range, LED D4 (IO12) starts to blink.
-5. In case of data retrieval failure, the system makes three attempts to read the data.
-6. If all three attempts fail, LED D5 (IO13) glows steadily in red, indicating a failure state.
+3. Scenario #1 - If the retrieved data falls within the normal range, LED D4 (IO12) is turned off, and the buzzer is muted.
+4. Scenario #2 - If the retrieved data falls outside the normal range, LED D4 (IO12) starts blinking red and the buzzer begins to beep with a low-pitch tone.
+5. Scenario #3 - If data retrieval fails, the LED D5 (IO13) will turn red and the buzzer will sound a continuous high-pitched tone, indicating a failure state. The system will then attempt to read the data three times. If all three attempts fail, the system will initiate a reboot.
 
-### ChatGPT Prompts for Coding
-
----
+### ChatGPT Coding Prompts 
 
 *Hi, ChatGPT,*
 
-***Role:** Act as a senior software developer with expertise in embedded development, specifically with IoT projects using the ESP32-C3, a DHT11 sensor, a Piezo Buzzer, and Platformio IDE.* 
+***Role:*** 
 
-***Task:** Your task is to mentor a high school student (like me) who has a basic understanding of Python and is new to C++. I need you to develop a comprehensive code snippet that fulfills the following objective, detailed requirements, implementation guidance, and output format.*
+*Act as a senior software developer with expertise in embedded development, specifically with IoT projects using the ESP32, Arduino-compatible sensors, and AWS Cloud.*
 
-***Objective:** Develop an educational code snippet for the ESP32-C3 to:*
+***Task:*** 
 
-- *Connect a DHT11 to Pin 19 (IO02) to read temperature and humidity data.*
-- *Connect a Piezo Buzzer to Pin 24 (IO11) to sound an alert beep.*
+*Your task is to mentor a high school student (like me) who has a basic understanding of Python and is new to C++. I need you to develop a comprehensive code snippet that fulfills the following objective, detailed requirements, implementation guidance, and output format.*
+
+***Objective:*** 
+
+*Create an educational code snippet that runs on the Platformio IDE, following the requirements below.*
 
 ***Requirements:***
 
-1. ***Visual Indication:*** 
-    1. *Use the LED D4 (IO12) on the ESP32-C3 to visually indicate the range of temperature and humidity data.*
-    2. *Use the LED D5 (IO13) on the ESP32-C3 to visually signal any system errors.*
-2. ***Sensor Data Reading:** Regularly read the DHT11 sensor's temperature and humidity data, and print it out locally in both Celsius and Fahrenheit.*
-3. ***LED Feedback for Sensor Error:** If no data is read from the DHT11 sensor (indicating a read error), LED D5 should display a steady red color, the Piezo Buzzer should beep at a lower pitch, and "Sensor Error!" should be printed locally.*
-4. ***Normal Condition Indication:** If the temperature and humidity data fall between the minimum and maximum values, LED D4 turns off, and the Piezo Buzzer remains muted.*
-5. ***Abnormal Condition Indication:** If the temperature and humidity data fall outside the normal range, the LED D4 blinks red, and the Piezo Buzzer beeps at a higher pitch.*
+1. ***Pin Wire Connections:*** 
+    1. *The DHT11 data pin is connected to IO2 on the ESP32-C3.*
+    2. *The Piezo Buzzer signal pin is connected to IO11 on the ESP32-C3.*
+    3. *LED D4 is connected to IO12 on the ESP32-C3.*
+    4. *LED D5 is connected to IO13 on the ESP32-C3.*
+2. ***Visual and Sound Indication:*** 
+    1. *Utilize the LED D4 to visually display the range of temperature and humidity data from the DHT11 sensor.*
+    2. *Employ the LED D5 to visually indicate sensor reading errors.*
+    3. *Activate the Piezo Buzzer to sound an alarm for abnormal conditions and errors.*
+3. ***Data Reading:** Periodically read the DHT11 sensor's temperature and humidity data, and print it out locally in both Celsius and Fahrenheit.*
+4. ***Normal Condition:** If the retrieved data falls within the normal range, LED D4 is turned off, and the buzzer is muted.*
+5. ***Abnormal Condition:** If the retrieved data falls outside the normal range, LED D4 starts blinking red, and the buzzer begins to beep with a low-pitch tone. The beeping frequency must be synchronized with the LED blinking frequency.*
+6. ***Error Handling:** If data retrieval fails, the LED D5 will turn red and the buzzer will sound a continuous high-pitched tone, indicating a failure state. The system will then attempt to read the data three times. If all three attempts fail, the system will initiate a reboot.*
 
-***Implementation Guidance:***
+***Expecation:***
 
-- *Implement C++ programming best practices in this code snippet.*
-- *Reference the files already uploaded in the "Knowledge" section.*
-- *Declare the variables for temperature, humidity data range, and LED blink interval.*
-- *Use a non-blocking approach and create a class to initialize, set color, and blink the built-in LED independently.*
-- *Establish a non-blocking approach and create a class to independently control the Piezo Buzzer alert sound.*
-- *If necessary, include and import the appropriate libraries.*
-- *Address sensor communication issues with appropriate error handling.*
+- *Apply C++ programming best practices.*
+- *Use function instead of class.*
+- *Define variables to the normal data range, and LED blink interval.*
+- *Adopt a non-blocking approach to blink the LED independently.*
+- *Include dependency libraries.*
+- *Provide line by line comments for clearity.*
 
-***Output Format:***
+***Format:***
 
-- *Use the pre-uploaded file format.*
-- *Provide clear line-by-line comments.*
+// **********************************
+// Created by: ESP32 Coding Assistant
+// Creation Date: [Current Date]
+// **********************************
+// Code Explanation
+// **********************************
+// Code Purpose:
+// ......
+// Requirement Summary:
+// ......
+// Hardware Connection:
+// ......
+// New Created Function/Class:
+// ......
+// Security Considerations:
+// ......
+// Testing and Validation Approach:
+// ......
+// **********************************
+// Libraries Import
+// **********************************
+// ......
+// **********************************
+// Constants Declaration
+// **********************************
+// ......
+// **********************************
+// Variables Declaration
+// **********************************
+// ......
+// **********************************
+// Functions or Class Declaration
+// **********************************
+// ......
+// **********************************
+// Setup Function
+// **********************************
+// ......
+// **********************************
+// Main loop
+// **********************************
+// ......
 
 ***Platformio.ini File:***
 
@@ -65,4 +108,5 @@ board_build.flash_mode = dio
 build_flags = 
 	-DARDUINO_USB_MODE=1
 	-DARDUINO_USB_CDC_ON_BOOT=1
+	-w
 ```
