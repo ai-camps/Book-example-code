@@ -1,0 +1,103 @@
+*Hi, ChatGPT,*
+
+***Role:*** 
+
+*You act as a senior software developer with expertise in embedded development, specifically with IoT projects using the ESP32, Arduino-compatible sensors, and AWS Cloud.*
+
+***Task:*** 
+
+*Your task is to mentor a high school student (like me) who has a basic understanding of Python and is new to C++. I need you to develop a comprehensive code snippet that fulfills the following objective, detailed requirements, implementation guidance, and output format.*
+
+***Objective:*** 
+
+*Create an educational code snippet that runs on the Platformio IDE, following the requirements below.*
+
+***Requirements:***
+
+1. ***Pin Wire Connections:*** 
+    1. *The DHT11 data pin is connected to IO2 on the ESP32-C3.*
+    2. *The Piezo Buzzer signal pin is connected to IO11 on the ESP32-C3.*
+    3. *LED D4 is connected to IO12 on the ESP32-C3.*
+    4. *LED D5 is connected to IO13 on the ESP32-C3.*
+2. ***Visual and Sound Indication:*** 
+    1. *Utilize the LED D4 to visually display the range of temperature and humidity data from the DHT11 sensor.*
+    2. *Employ the LED D5 to visually indicate sensor reading errors.*
+    3. *Activate the Piezo Buzzer to sound an alarm for abnormal conditions and errors.*
+3. ***Data Reading:** Periodically read the DHT11 sensor's temperature and humidity data, and print it out locally in both Celsius and Fahrenheit.*
+4. ***Normal Condition:** If the retrieved data falls within the normal range, LED D4 is turned off, and the buzzer is muted.*
+5. ***Abnormal Condition:** If the retrieved data falls outside the normal range, LED D4 starts blinking red, and the buzzer begins to beep with a low-pitch tone, the buzzer tone must be synchronized with LED blinking.*
+6. ***Error Handling:** If data retrieval fails, the LED D5 will turn red and the buzzer will sound a continuous high-pitched tone, indicating a failure state. The system will then attempt to read the data three times. If all three attempts fail, the system will initiate a reboot.*
+
+***Expecation:***
+
+- *Apply C++ programming best practices.*
+- *Use function instead of class.*
+- *Implement the PWM control for both the LED and buzzer through ledcSetup and ledcAttachPin.*
+- *Define variables to the normal data range, and LED blink interval.*
+- *Adopt a non-blocking approach to blink the LED independently.*
+- *Include dependency libraries.*
+- *Provide line by line comments for clearity.*
+
+***Format:***
+
+// **********************************
+// Created by: ESP32 Coding Assistant
+// Creation Date: [Current Date]
+// **********************************
+// Code Explanation
+// **********************************
+// Code Purpose:
+// ......
+// Requirement Summary:
+// ......
+// Hardware Connection:
+// ......
+// New Created Function/Class:
+// ......
+// Security Considerations:
+// ......
+// Testing and Validation Approach:
+// ......
+// **********************************
+// Libraries Import
+// **********************************
+// ......
+// **********************************
+// Constants Declaration
+// **********************************
+// ......
+// **********************************
+// Variables Declaration
+// **********************************
+// ......
+// **********************************
+// Functions or Class Declaration
+// **********************************
+// ......
+// **********************************
+// Setup Function
+// **********************************
+// ......
+// **********************************
+// Main loop
+// **********************************
+// ......
+
+***Platformio.ini File:***
+
+- *Create a new file that incorporates the required library dependencies and environment settings.*
+- *Ensure the following information is included.*
+
+```
+[env:esp32-c3-devkitc-02]
+platform = espressif32
+board = esp32-c3-devkitc-02
+framework = arduino
+monitor_filters = esp32_exception_decoder, colorize
+monitor_speed = 115200
+board_build.flash_mode = dio
+build_flags = 
+	-DARDUINO_USB_MODE=1
+	-DARDUINO_USB_CDC_ON_BOOT=1
+	-w
+```
