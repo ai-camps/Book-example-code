@@ -1,12 +1,12 @@
 // **********************************
 // Created by: ESP32 Coding Assistant
-// Creation Date: 2024-03-06
+// Creation Date: 2024-03-07
 // **********************************
 // Code Explanation
 // **********************************
 // Code Purpose:
 // This code is designed to periodically read temperature and humidity data from a DHT11 sensor
-// and provide visual and sound indications based on the data's normality or abnormality, 
+// and provide visual and sound indications based on the data's normality or abnormality,
 // and handle sensor reading errors.
 // Requirement Summary:
 // - Periodically read from DHT11 sensor connected to IO2.
@@ -31,93 +31,121 @@
 // **********************************
 // Libraries Import
 // **********************************
-#include <Arduino.h> // Standard Arduino library
-#include "DHT.h"     // DHT sensor library
+#include <Arduino.h> // Include the Arduino base library
+#include "DHT.h"     // Include the library for the DHT sensor
 
 // **********************************
 // Constants Declaration
 // **********************************
-#define DHTPIN 2               // Pin connected to the DHT11 data pin
-#define DHTTYPE DHT11          // Specify DHT11 type
-#define BUZZER_PIN 11          // Pin connected to the Piezo Buzzer
+#define DHTPIN 2      // Pin connected to the DHT11 data pin
+#define DHTTYPE DHT11 // Specify DHT11 type
+#define BUZZER_PIN 11 // Pin connected to the Piezo Buzzer
+
 #define LED_RANGE_INDICATOR 12 // LED for temperature & humidity range indication
 #define LED_ERROR_INDICATOR 13 // LED for error indication
 
-// Temperature and Humidity Ranges
-const float TEMP_MIN = 10.0; // Minimum normal temperature
-const float TEMP_MAX = 25.0; // Maximum normal temperature
-const float HUM_MIN = 10.0;  // Minimum normal humidity
-const float HUM_MAX = 60.0;  // Maximum normal humidity
+#define LED_RANGE_CHANNEL 0 // LEDC channel for range indicator
+#define LED_ERROR_CHANNEL 1 // LEDC channel for error indicator
+#define LED_FREQ 5000       // Frequency for LED PWM
+#define LED_RESOLUTION 8    // Resolution for LED PWM (8-bit = 0-255)
+#define LED_ON 255
+#define LED_OFF 0
+
+#define BUZZER_CHANNEL 2     // LEDC channel for Piezo Buzzer
+#define BUZZER_FREQ 2000     // Frequency for Buzzer PWM
+#define BUZZER_RESOLUTION 10 // Resolution for Buzzer PWM (10-bit = 0-1023)
+#define BUZZER_VOLUME_HALF 512
+#define BUZZER_OFF 0
 
 // **********************************
 // Variables Declaration
 // **********************************
-DHT dht(DHTPIN, DHTTYPE);                // DHT sensor object
-unsigned long sensorReadInterval = 3000; // Time interval for sensor readings in milliseconds
-unsigned long lastCheckTime = 0;         // Time of the last sensor reading
+const float TEMP_MIN = 10.0; // Minimum normal temperature
+const float TEMP_MAX = 25.0; // Maximum normal temperature
+const float HUM_MIN = 10.0;  // Minimum normal humidity
+const float HUM_MAX = 80.0;  // Maximum normal humidity
 
-// Blink control variables
-bool ledIndicatorState = LOW;    // Indicates whether the LED should be blinking.
-unsigned long lastBlinkTime = 0; // Timestamp of the last LED blink toggle.
-const long blinkInterval = 100;  // Interval for LED blinking in milliseconds.
-bool ledState = LOW;             // Current state of the LED, initialized to OFF.
-bool isSensorError = false;      // Indicates whether a sensor error has occurred.
+// Timing and control variables
+unsigned long sensorReadInterval = 3000; // Interval between sensor readings
+unsigned long lastCheckTime = 0;         // Last sensor check time
+
+bool isBlinking = false;         // Flag for LED blinking state
+unsigned long lastBlinkTime = 0; // Last time the LED blinked
+const long blinkInterval = 100;  // Interval between blinks
+
+DHT dht(DHTPIN, DHTTYPE); // Initialize DHT sensor
+
+struct SensorState
+{
+  bool isBlinking;
+  unsigned long lastBlinkTime;
+};
+
+SensorState sensorState = {false, 0};
 
 // **********************************
-// Functions or Class Declaration
+// Functions  Declaration
 // **********************************
-void ledBlinking(unsigned long currentMillis); // Manages non-blocking blinking of the LED.
-void checkSensorReadings();                    // Reads sensor data and updates indicators accordingly.
-void indicateNormalCondition();                // Handles indicators for normal sensor readings.
-void indicateAbnormalCondition();              // Handles indicators for out-of-range sensor readings.
-void indicateSensorError();                    // Handles indicators for sensor errors.
+void checkSensorReadings();
+void indicateNormalCondition();
+void indicateAbnormalCondition();
+void indicateSensorError();
+void ledBlinking();
 
 // **********************************
 // Setup Function
 // **********************************
 void setup()
 {
-  Serial.begin(115200);
-  pinMode(LED_RANGE_INDICATOR, OUTPUT); // Set LED pin as output
-  pinMode(LED_ERROR_INDICATOR, OUTPUT); // Set LED pin as output
-  dht.begin();                          // Start DHT sensor
-  Serial.println("DHT11 sensor monitoring started.");
+  Serial.begin(115200); // Initialize serial communication
+  dht.begin();          // Initialize the DHT sensor
+
+  // Setup PWM for LEDs and buzzer
+  ledcSetup(LED_RANGE_CHANNEL, LED_FREQ, LED_RESOLUTION);
+  ledcSetup(LED_ERROR_CHANNEL, LED_FREQ, LED_RESOLUTION);
+  ledcSetup(BUZZER_CHANNEL, BUZZER_FREQ, BUZZER_RESOLUTION);
+
+  // Attach PWM channels to GPIO pins
+  ledcAttachPin(LED_RANGE_INDICATOR, LED_RANGE_CHANNEL);
+  ledcAttachPin(LED_ERROR_INDICATOR, LED_ERROR_CHANNEL);
+  ledcAttachPin(BUZZER_PIN, BUZZER_CHANNEL);
+
+  Serial.println("DHT11 sensor monitoring started."); // Inform the user that monitoring has started
 }
 
 // **********************************
 // Main loop
 // **********************************
-// Main program loop, which runs repeatedly after setup().
 void loop()
 {
-  unsigned long currentMillis = millis(); // Get the current time in milliseconds.
-
-  // Check if it's time to read the sensor again.
+  unsigned long currentMillis = millis(); // Get the current time
+  // Check if it's time to read the sensor
   if (currentMillis - lastCheckTime >= sensorReadInterval)
   {
-    lastCheckTime = currentMillis; // Update the last check time.
-    checkSensorReadings();         // Read and process sensor readings.
+    lastCheckTime = currentMillis; // Update the last check time
+    checkSensorReadings();         // Read and process sensor data
   }
-
-  // Call manageBlinking to handle the LED blinking logic.
-  ledBlinking(currentMillis);
+  ledBlinking(); // Handle LED blinking and buzzer beeping
 }
 
-// Reads humidity and temperature from the DHT sensor, displays them, and updates indicator LEDs.
+// **********************************
+// Functions  Definition
+// **********************************
 void checkSensorReadings()
 {
-  float humidity = dht.readHumidity();            // Read humidity value from sensor.
-  float temperatureC = dht.readTemperature();     // Read temperature in Celsius.
-  float temperatureF = temperatureC * 9 / 5 + 32; // Convert Celsius to Fahrenheit.
-  delay(100);                                     // Adds a small delay to stabilize sensor readings (optional).
+  // Read humidity and temperature from the DHT sensor
+  float humidity = dht.readHumidity();            // Read humidity
+  float temperatureC = dht.readTemperature();     // Read temperature in Celsius
+  float temperatureF = dht.readTemperature(true); // Read temperature in Fahrenheit
 
+  // Check if the readings are valid
   if (isnan(humidity) || isnan(temperatureC))
-  {                        // Check if readings are valid.
-    indicateSensorError(); // Handle sensor error.
+  {
+    indicateSensorError(); // Handle sensor error
     return;
   }
 
-  // Display the humidity and temperature readings in both Celsius and Fahrenheit.
+  // Print both Celsius and Fahrenheit temperatures
   Serial.print("Humidity: ");
   Serial.print(humidity);
   Serial.print("%, Temp: ");
@@ -126,71 +154,59 @@ void checkSensorReadings()
   Serial.print(temperatureF);
   Serial.println("F");
 
-  // Update indicators based on whether readings are within the normal range.
+  // Determine if the readings are within normal ranges
   if (temperatureC >= TEMP_MIN && temperatureC <= TEMP_MAX && humidity >= HUM_MIN && humidity <= HUM_MAX)
   {
-    indicateNormalCondition(); // Handle normal condition.
+    indicateNormalCondition(); // Handle normal condition
   }
   else
   {
-    indicateAbnormalCondition(); // Handle abnormal condition.
+    indicateAbnormalCondition(); // Handle abnormal condition
   }
 }
 
-// Updates indicators to reflect normal sensor reading conditions.
 void indicateNormalCondition()
 {
-  digitalWrite(LED_RANGE_INDICATOR, LOW); // Turn off range indicator LED.
-  digitalWrite(LED_ERROR_INDICATOR, LOW); // Turn off error indicator LED.
-  noTone(BUZZER_PIN);                     // Turn off the buzzer.
-  ledIndicatorState = false;              // Stop blinking.
+  // Stop blinking and beeping for normal conditions
+  sensorState.isBlinking = false;
+  ledcWrite(LED_RANGE_CHANNEL, LED_OFF); // Turn off range indicator LED
+  ledcWrite(LED_ERROR_CHANNEL, LED_OFF); // Turn off error indicator LED
+  ledcWrite(BUZZER_CHANNEL, BUZZER_OFF); // Mute the buzzer
 }
 
-// Updates indicators to reflect abnormal sensor reading conditions and starts LED blinking.
 void indicateAbnormalCondition()
 {
-  digitalWrite(LED_ERROR_INDICATOR, LOW);         // Ensure the error indicator is off.
-  ledIndicatorState = true;                       // Start LED blinking.
-  Serial.println("Abnormal Condition Detected!"); // Print "Abnormal Condition Detected" message to the serial monitor
+  // Start blinking and set buzzer for abnormal conditions
+  sensorState.isBlinking = true;
+  ledcWrite(BUZZER_CHANNEL, BUZZER_VOLUME_HALF);  // Set buzzer to half volume (value can be adjusted)
+  Serial.println("Abnormal Condition Detected!"); // Inform the user
 }
 
-// Updates indicators to reflect a sensor error condition.
 void indicateSensorError()
 {
-  digitalWrite(LED_RANGE_INDICATOR, LOW);  // Ensure the range indicator is off.
-  digitalWrite(LED_ERROR_INDICATOR, HIGH); // Turn on the error indicator LED.
-  tone(BUZZER_PIN, 5000);                  // Emit a high-pitch tone to indicate an error.
-  ledIndicatorState = false;               // Stop LED blinking.
-  isSensorError = true;                    // Set the sensor error flag.
-  Serial.println("Sensor Error!");         // Print "Sensor Error" message to the serial monitor
+  // Handle sensor error: stop blinking, set error indicator, and beep continuously
+  sensorState.isBlinking = false;                // Stop blinking
+  ledcWrite(LED_ERROR_CHANNEL, LED_ON);          // Turn LED D5 solid red
+  ledcWrite(BUZZER_CHANNEL, BUZZER_VOLUME_HALF); // Adjust 512 to your desired buzzer volume
+  Serial.println("Sensor Error!");               // Inform the user
 }
 
-// Manages the non-blocking blinking of the LED and synchronizes the buzzer.
-void ledBlinking(unsigned long currentMillis)
+void ledBlinking()
 {
-  if (ledIndicatorState && (currentMillis - lastBlinkTime >= blinkInterval))
-  {
-    lastBlinkTime = currentMillis; // Update the last blink time.
+  // Handle blinking of the range indicator LED and buzzer beeping
+  if (!sensorState.isBlinking)
+    return; // Exit if blinking is not enabled
 
-    ledState = !ledState;                        // Toggle the LED state.
-    digitalWrite(LED_RANGE_INDICATOR, ledState); // Update the LED's physical state.
-
-    // Sync the buzzer with the LED state.
-    if (ledState == HIGH)
-    {
-      tone(BUZZER_PIN, 1000); // Turn on the buzzer with a specified frequency when the LED is on.
-    }
-    else
-    {
-      noTone(BUZZER_PIN); // Turn off the buzzer when the LED is off.
-    }
-  }
-  else if (!ledIndicatorState)
+  unsigned long currentMillis = millis(); // Get current time
+  // Check if it's time to toggle the LED and buzzer state
+  if (currentMillis - lastBlinkTime >= blinkInterval)
   {
-    // Turn off the buzzer if not blinking and no sensor error
-    if (!isSensorError)
-    {
-      noTone(BUZZER_PIN);
-    }
+    lastBlinkTime = currentMillis;
+    static bool ledState = false; // Toggle state variable
+    ledState = !ledState;         // Toggle the state
+    // Toggle the range indicator LED for abnormal conditions
+    ledcWrite(LED_RANGE_CHANNEL, ledState ? LED_ON : LED_OFF);
+    // Synchronize the buzzer beeping with LED blinking
+    ledcWrite(BUZZER_CHANNEL, ledState ? BUZZER_VOLUME_HALF : LED_OFF); // Adjust the value 512 as needed for desired buzzer volume
   }
 }
