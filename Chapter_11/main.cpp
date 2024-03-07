@@ -37,29 +37,33 @@
 // **********************************
 // Constants Declaration
 // **********************************
+
+// DHT11 Sensor Pins and Settings
 #define DHTPIN 2      // Pin connected to the DHT11 data pin
 #define DHTTYPE DHT11 // Specify DHT11 type
-#define BUZZER_PIN 11 // Pin connected to the Piezo Buzzer
 
-#define LED_RANGE_INDICATOR 12 // LED for temperature & humidity range indication
-#define LED_ERROR_INDICATOR 13 // LED for error indication
+// LED Pins and PWM settings
+#define LED_RANGE_INDICATOR 12 // Pin to LED (D4) for temperature & humidity range indication
+#define LED_ERROR_INDICATOR 13 // Pin to LED (D5) for error indication
+#define LED_RANGE_CHANNEL 0    // LEDC channel for range indicator LED (D4)
+#define LED_ERROR_CHANNEL 1    // LEDC channel for error indicator LED (D5)
+#define LED_FREQ 5000          // Frequency for LED PWM
+#define LED_RESOLUTION 8       // Resolution for LED PWM (8-bit = 0-255)
+#define LED_ON 255             // LED ON state
+#define LED_OFF 0              // LED OFF state
 
-#define LED_RANGE_CHANNEL 0 // LEDC channel for range indicator
-#define LED_ERROR_CHANNEL 1 // LEDC channel for error indicator
-#define LED_FREQ 5000       // Frequency for LED PWM
-#define LED_RESOLUTION 8    // Resolution for LED PWM (8-bit = 0-255)
-#define LED_ON 255
-#define LED_OFF 0
-
-#define BUZZER_CHANNEL 2     // LEDC channel for Piezo Buzzer
-#define BUZZER_FREQ 2000     // Frequency for Buzzer PWM
-#define BUZZER_RESOLUTION 10 // Resolution for Buzzer PWM (10-bit = 0-1023)
-#define BUZZER_VOLUME_HALF 512
-#define BUZZER_OFF 0
+// Buzzer Pins and PWM settings
+#define BUZZER_PIN 11          // Pin connected to the Piezo Buzzer
+#define BUZZER_CHANNEL 2       // LEDC channel for Piezo Buzzer
+#define BUZZER_FREQ 2000       // Frequency for Buzzer PWM
+#define BUZZER_RESOLUTION 10   // Resolution for Buzzer PWM (10-bit = 0-1023)
+#define BUZZER_VOLUME_HALF 512 // Half volume for the buzzer
+#define BUZZER_OFF 0           // Turn off the buzzer
 
 // **********************************
 // Variables Declaration
 // **********************************
+// Normal operating ranges for temperature and humidity
 const float TEMP_MIN = 10.0; // Minimum normal temperature
 const float TEMP_MAX = 25.0; // Maximum normal temperature
 const float HUM_MIN = 10.0;  // Minimum normal humidity
@@ -69,28 +73,31 @@ const float HUM_MAX = 80.0;  // Maximum normal humidity
 unsigned long sensorReadInterval = 3000; // Interval between sensor readings
 unsigned long lastCheckTime = 0;         // Last sensor check time
 
+// LED and Buzzer control variables
 bool isBlinking = false;         // Flag for LED blinking state
 unsigned long lastBlinkTime = 0; // Last time the LED blinked
 const long blinkInterval = 100;  // Interval between blinks
 
+// Initialize the DHT sensor
 DHT dht(DHTPIN, DHTTYPE); // Initialize DHT sensor
 
+// Sensor state structure
 struct SensorState
 {
   bool isBlinking;
   unsigned long lastBlinkTime;
 };
-
+// Initialize the sensor state
 SensorState sensorState = {false, 0};
 
 // **********************************
 // Functions  Declaration
 // **********************************
-void checkSensorReadings();
-void indicateNormalCondition();
-void indicateAbnormalCondition();
-void indicateSensorError();
-void ledBlinking();
+void checkSensorReadings();       // Function to read and process sensor data
+void indicateNormalCondition();   // Function to indicate normal conditions
+void indicateAbnormalCondition(); // Function to indicate abnormal conditions
+void indicateSensorError();       // Function to indicate sensor error
+void ledBlinking();               // Function to handle LED blinking and buzzer beeping
 
 // **********************************
 // Setup Function
@@ -101,14 +108,14 @@ void setup()
   dht.begin();          // Initialize the DHT sensor
 
   // Setup PWM for LEDs and buzzer
-  ledcSetup(LED_RANGE_CHANNEL, LED_FREQ, LED_RESOLUTION);
-  ledcSetup(LED_ERROR_CHANNEL, LED_FREQ, LED_RESOLUTION);
-  ledcSetup(BUZZER_CHANNEL, BUZZER_FREQ, BUZZER_RESOLUTION);
+  ledcSetup(LED_RANGE_CHANNEL, LED_FREQ, LED_RESOLUTION);    // Setup LEDC channel for range indicator LED
+  ledcSetup(LED_ERROR_CHANNEL, LED_FREQ, LED_RESOLUTION);    // Setup LEDC channel for error indicator LED
+  ledcSetup(BUZZER_CHANNEL, BUZZER_FREQ, BUZZER_RESOLUTION); // Setup LEDC channel for Piezo Buzzer
 
   // Attach PWM channels to GPIO pins
-  ledcAttachPin(LED_RANGE_INDICATOR, LED_RANGE_CHANNEL);
-  ledcAttachPin(LED_ERROR_INDICATOR, LED_ERROR_CHANNEL);
-  ledcAttachPin(BUZZER_PIN, BUZZER_CHANNEL);
+  ledcAttachPin(LED_RANGE_INDICATOR, LED_RANGE_CHANNEL); // Attach range indicator LED to PWM channel
+  ledcAttachPin(LED_ERROR_INDICATOR, LED_ERROR_CHANNEL); // Attach error indicator LED to PWM channel
+  ledcAttachPin(BUZZER_PIN, BUZZER_CHANNEL);             // Attach Piezo Buzzer to PWM channel
 
   Serial.println("DHT11 sensor monitoring started."); // Inform the user that monitoring has started
 }
