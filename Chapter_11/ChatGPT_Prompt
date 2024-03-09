@@ -15,28 +15,30 @@
 ***Requirements:***
 
 1. ***Pin Wire Connections:*** 
-    1. *The DHT11 data pin is connected to IO2 on the ESP32-C3.*
-    2. *The Piezo Buzzer signal pin is connected to IO11 on the ESP32-C3.*
-    3. *LED D4 is connected to IO12 on the ESP32-C3.*
-    4. *LED D5 is connected to IO13 on the ESP32-C3.*
-2. ***Visual and Sound Indication:*** 
-    1. *Utilize the LED D4 to visually display the range of temperature and humidity data from the DHT11 sensor.*
-    2. *Employ the LED D5 to visually indicate sensor reading errors.*
-    3. *Activate the Piezo Buzzer to sound an alarm for abnormal conditions and errors.*
-3. ***Data Reading:** Periodically read the DHT11 sensor's temperature and humidity data, and print it out locally in both Celsius and Fahrenheit.*
-4. ***Normal Condition:** If the retrieved data falls within the normal range, LED D4 is turned off, and the buzzer is muted.*
-5. ***Abnormal Condition:** If the retrieved data falls outside the normal range, LED D4 starts blinking red, and the buzzer begins to beep with a low-pitch tone, the buzzer tone must be synchronized with LED blinking.*
-6. ***Error Handling:** If data retrieval fails, the LED D5 will turn red and the buzzer will sound a continuous high-pitched tone, indicating a failure state. The system will then attempt to read the data three times. If all three attempts fail, the system will initiate a reboot.*
+    1. *Connect the DHT11 data pin to IO2 on the ESP32-C3.*
+    2. *Connect the Piezo Buzzer signal pin to IO11 on the ESP32-C3.*
+    3. *Connect the RGB LED to IO8 for Red, IO4 for Blue, and IO9 for Green on the ESP32-C3.*
+    4. *Use IO13 to control the ESP32-C3’s built-in LED D5, designated as the System LED.*
+2. ***Data Retrieve Operation:** Periodically read the DHT11 sensor's temperature and humidity data, and print it out locally in both Celsius and Fahrenheit.*
+3. ***Normal Condition:** The retrieved data falls within the pre-defined normal range.*
+4. ***Abnormal Condition:** The retrieved data falls out of the pre-defined normal range.*
+5. ***Error Condition:** Data retrieval fails, and the system will then attempt to read the data three times. If all three attempts fail, the system will initiate a reboot.*
+6. ***Visual and Sound Indication:*** 
+    1. ***Normal Condition:** RGB LED turns solid on, and mute the buzzer.*
+    2. ***Abnormal Condition:** If the data exceeds the normal range, the RGB LED will blink red, and the buzzer will beep in sync; If the data falls below the normal range, the RGB LED will blink blue, and the buzzer will beep in sync.*
+    3. ***Error Condition:** Turns the system LED on solidly, and triggers the buzzer to beep continuously.*
 
-***Expecation:***
+***Must to Apply:***
 
-- *Apply C++ programming best practices.*
-- *Use function instead of class.*
-- *Implement the PWM control for both the LED and buzzer through ledcSetup and ledcAttachPin.*
-- *Define variables to the normal data range, and LED blink interval.*
-- *Adopt a non-blocking approach to blink the LED independently.*
-- *Include dependency libraries.*
-- *Provide line by line comments for clearity.*
+- *Adopt C++ programming best practices.*
+- *Use “constexpr” to declare hardware related variables.*
+- *Uses the **`millis()`** function to manage timing without blocking other code execution*
+- *Favor functions over classes.*
+- *Implement PWM control for both the System LED and buzzer using ledcSetup and ledcAttachPin.*
+- *Avoid using magic numbers when defining constant variables.*
+- *Use a non-blocking approach to blink the LED independently.*
+- *Include necessary dependency libraries.*
+- *Provide line-by-line comments for clarity.*
 
 ***Format:***
 
