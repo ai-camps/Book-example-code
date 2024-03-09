@@ -1,7 +1,7 @@
 ### Local Application Logic
 
-1. The ESP32-C3 periodically retrieves temperature and humidity data from the DHT11 sensor.
-2. The retrieved data is checked against a pre-defined normal range.
-3. Scenario #1 - If the retrieved data falls within the normal range, LED D4 (IO12) is turned off, and the buzzer is muted.
-4. Scenario #2 - If the retrieved data falls outside the normal range, LED D4 (IO12) starts blinking red and the buzzer begins to beep with a low-pitch tone.
-5. Scenario #3 - If data retrieval fails, the LED D5 (IO13) will turn red and the buzzer will sound a continuous high-pitched tone, indicating a failure state. The system will then attempt to read the data three times. If all three attempts fail, the system will initiate a reboot.
+1. The ESP32 retrieves temperature and humidity data from the DHT11 sensor periodically.
+2. The ESP32 checks the retrieved data against a preset normal range.
+3. Normal Condition - If the retrieved data falls within the normal range, a green LED remains solid on without any alert beep.
+4. Abnormal Condition - If the retrieved data falls below the normal range, a blinking blue LED and a beep signal this. If the data exceeds the normal range, a blinking red LED and a beep indicate this.
+5. Error Condition - If the DHT11 fails to provide data, a system LED turns on red and a continuous sound indicate a failure state. The ESP32-C3 tries to read the data three times. If all attempts fail, it initiates a reboot.
