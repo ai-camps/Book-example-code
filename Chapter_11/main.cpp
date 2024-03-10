@@ -43,20 +43,20 @@
 constexpr int DHTPIN = 2;      // Pin connected to the DHT11 data pin
 constexpr int DHTTYPE = DHT11; // Specify DHT11 type
 
-// RGB LED Pins
-constexpr int LED_RED = 8;   // Pin for the red component of RGB LED
-constexpr int LED_GREEN = 9; // Pin for the green component of RGB LED
-constexpr int LED_BLUE = 4;  // Pin for the blue component of RGB LED
+// Data RGB LED Pins
+constexpr int DATA_LED_ABOVE_RED = 8;    // Pin for the red component of RGB LED
+constexpr int DATA_LED_NORMAL_GREEN = 9; // Pin for the green component of RGB LED
+constexpr int DATA_LED_BELOW_BLUE = 4;   // Pin for the blue component of RGB LED
 
 // LED D4 and D5 Pins and PWM settings
-constexpr int LED_D4 = 12;              // Pin to LED D4, will be used for future use case.
-constexpr int LED_ERROR_INDICATOR = 13; // Pin to LED (D5) for sensor reading error indication
-constexpr int LED_D4_CHANNEL = 0;       // LEDC channel for range indicator LED (D4)
-constexpr int LED_ERROR_CHANNEL = 1;    // LEDC channel for error indicator LED (D5)
-constexpr int LED_FREQ = 5000;          // Frequency for LED PWM
-constexpr int LED_RESOLUTION = 8;       // Resolution for LED PWM (8-bit = 0-255)
-constexpr int LED_ON = 255;             // LED ON state
-constexpr int LED_OFF = 0;              // LED OFF state
+constexpr int SYS_LED_D4 = 12;        // Pin to LED D4, will be used for future use case.
+constexpr int SYS_LED_D5 = 13;        // Pin to LED D5 for sensor reading error indication
+constexpr int SYS_LED_D4_CHANNEL = 0; // LEDC channel for range indicator LED (D4)
+constexpr int SYS_LED_D5_CHANNEL = 1; // LEDC channel for error indicator LED (D5)
+constexpr int SYS_LED_FREQ = 5000;    // Frequency for LED PWM
+constexpr int SYS_LED_RESOLUTION = 8; // Resolution for LED PWM (8-bit = 0-255)
+constexpr int SYS_LED_ON = 255;       // LED ON state
+constexpr int SYS_LED_OFF = 0;        // LED OFF state
 
 // Buzzer Pins and PWM settings
 constexpr int BUZZER_PIN = 11;          // Pin connected to the Piezo Buzzer
@@ -76,15 +76,19 @@ constexpr float HUM_MAX = 80.0;  // Maximum normal humidity
 constexpr unsigned long sensorReadInterval = 3000; // Interval between sensor readings
 unsigned long lastCheckTime = 0;                   // Last sensor check time
 
+// Declare the error count variable
+int sensorErrorCount = 0;
+
 // Blinking control variables
 bool shouldBlink = false;           // Flag for LED blinking state
 unsigned long lastBlinkTime = 0;    // Last time the LED blinked
 constexpr long blinkInterval = 100; // Interval between blinks
-int blinkingLED = LED_OFF;          // Use LED_RED or LED_BLUE based on the condition
+int blinkingLED = -1;               // Assuming -1 as an invalid value indicating no LED is set for blinking.
 
 // Initialize the DHT sensor
 DHT dht(DHTPIN, DHTTYPE); // Initialize DHT sensor
 
+// Declare functions
 void checkSensorReadings();                       // Function to read and process sensor data
 void updateLEDs(bool red, bool green, bool blue); // Function to update the RGB LED
 void indicateNormalCondition();                   // Function to indicate normal conditions
@@ -101,18 +105,18 @@ void setup()
   Serial.begin(115200); // Initialize serial communication
   dht.begin();          // Initialize the DHT sensor
 
-  // Set RGB LED pins as output
-  pinMode(LED_RED, OUTPUT);   // Set LED_RED pin as output
-  pinMode(LED_GREEN, OUTPUT); // Set LED_GREEN pin as output
-  pinMode(LED_BLUE, OUTPUT);  // Set LED_BLUE pin as output
+  // Set Data LED pins as output
+  pinMode(DATA_LED_ABOVE_RED, OUTPUT);    // Set LED RED pin as output
+  pinMode(DATA_LED_NORMAL_GREEN, OUTPUT); // Set LED GREEN pin as output
+  pinMode(DATA_LED_BELOW_BLUE, OUTPUT);   // Set LED BLUE pin as output
 
-  // Setup and Attach PWM channels to LED D4
-  ledcSetup(LED_D4_CHANNEL, LED_FREQ, LED_RESOLUTION); // Setup LEDC channel for range indicator LED
-  ledcAttachPin(LED_D4, LED_D4_CHANNEL);               // Attach range indicator LED to PWM channel
+  // Setup and Attach PWM channels to System LED D4
+  ledcSetup(SYS_LED_D4_CHANNEL, SYS_LED_FREQ, SYS_LED_RESOLUTION); // Setup LEDC channel for range indicator LED
+  ledcAttachPin(SYS_LED_D4, SYS_LED_D4_CHANNEL);                   // Attach range indicator LED to PWM channel
 
-  // Setup and Attach PWM channels to LED D5
-  ledcSetup(LED_ERROR_CHANNEL, LED_FREQ, LED_RESOLUTION); // Setup LEDC channel for error indicator LED
-  ledcAttachPin(LED_ERROR_INDICATOR, LED_ERROR_CHANNEL);  // Attach error indicator LED to PWM channel
+  // Setup and Attach PWM channels to System LED D5
+  ledcSetup(SYS_LED_D5_CHANNEL, SYS_LED_FREQ, SYS_LED_RESOLUTION); // Setup LEDC channel for error indicator LED
+  ledcAttachPin(SYS_LED_D5, SYS_LED_D5_CHANNEL);                   // Attach error indicator LED to PWM channel
 
   // Setup and Attach PWM channels to the Piezo Buzzer
   ledcSetup(BUZZER_CHANNEL, BUZZER_FREQ, BUZZER_RESOLUTION); // Setup LEDC channel for Piezo Buzzer
@@ -154,6 +158,9 @@ void checkSensorReadings()
     return;
   }
 
+  // Reset sensor error count on successful reading
+  sensorErrorCount = 0;
+
   // Print temperature and humidity
   Serial.print("Humidity: ");
   Serial.print(humidity);
@@ -180,16 +187,16 @@ void checkSensorReadings()
 
 void updateLEDs(bool red, bool green, bool blue)
 {
-  digitalWrite(LED_RED, red ? HIGH : LOW);
-  digitalWrite(LED_GREEN, green ? HIGH : LOW);
-  digitalWrite(LED_BLUE, blue ? HIGH : LOW);
+  digitalWrite(DATA_LED_ABOVE_RED, red ? HIGH : LOW);
+  digitalWrite(DATA_LED_NORMAL_GREEN, green ? HIGH : LOW);
+  digitalWrite(DATA_LED_BELOW_BLUE, blue ? HIGH : LOW);
 }
 
 void indicateNormalCondition()
 {
   shouldBlink = false;                        // Stop blinking
   updateLEDs(false, true, false);             // Turn on GREEN LED, off others
-  ledcWrite(LED_ERROR_CHANNEL, LED_OFF);      // Turn LED D5 solid red
+  ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_OFF); // Turn LED D5 solid red
   ledcWrite(BUZZER_CHANNEL, BUZZER_OFF);      // Mute the buzzer
   Serial.println("Current LED Color: GREEN"); // Print current LED color
 }
@@ -197,22 +204,33 @@ void indicateNormalCondition()
 void indicateConditionBelowRange()
 {
   shouldBlink = true;
-  blinkingLED = LED_BLUE;                             // Indicate that the blue LED should blink
+  ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_OFF);         // Turn LED D5 solid red
+  blinkingLED = DATA_LED_BELOW_BLUE;                  // Indicate that the blue LED should blink
   Serial.println("Current LED Color: BLUE Blinking"); // Updated print statement
 }
 
 void indicateConditionAboveRange()
 {
   shouldBlink = true;
-  blinkingLED = LED_RED;                             // Indicate that the red LED should blink
+  ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_OFF);        // Turn LED D5 solid red
+  blinkingLED = DATA_LED_ABOVE_RED;                  // Indicate that the red LED should blink
   Serial.println("Current LED Color: RED Blinking"); // Updated print statement
 }
 
 void indicateSensorError()
 {
+  sensorErrorCount++; // Increment the sensor error count
+
+  // Check if the error count has reached 3
+  if (sensorErrorCount >= 3)
+  {
+    Serial.println("Maximum sensor error retries reached. Rebooting...");
+    delay(1000);   // Short delay to allow the message to be sent before rebooting
+    ESP.restart(); // Reboot the ESP device
+  }
   shouldBlink = false;                           // Stop blinking
   updateLEDs(false, false, false);               // Turn off all LEDs
-  ledcWrite(LED_ERROR_CHANNEL, LED_ON);          // Turn LED D5 solid red
+  ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_ON);     // Turn LED D5 solid red
   ledcWrite(BUZZER_CHANNEL, BUZZER_VOLUME_HALF); // Set buzzer to half volume
   Serial.println("Sensor Error!");               // Inform the user
 }
@@ -230,16 +248,16 @@ void ledBlinking()
     ledState = !ledState;          // Toggle the state
 
     // Determine which LED to blink based on the condition
-    if (blinkingLED == LED_BLUE)
+    if (blinkingLED == DATA_LED_BELOW_BLUE)
     {
       updateLEDs(false, false, ledState); // Blink Blue LED for below range
     }
-    else if (blinkingLED == LED_RED)
+    else if (blinkingLED == DATA_LED_ABOVE_RED)
     {
       updateLEDs(ledState, false, false); // Blink Red LED for above range
     }
 
     // Synchronize the buzzer beeping with LED blinking
-    ledcWrite(BUZZER_CHANNEL, ledState ? BUZZER_VOLUME_HALF : LED_OFF);
+    ledcWrite(BUZZER_CHANNEL, ledState ? BUZZER_VOLUME_HALF : BUZZER_OFF);
   }
 }
