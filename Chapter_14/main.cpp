@@ -65,7 +65,7 @@ constexpr int DATA_LED_ABOVE_RED = 8;    // Pin for the red component of RGB LED
 constexpr int DATA_LED_NORMAL_GREEN = 9; // Pin for the green component of RGB LED
 constexpr int DATA_LED_BELOW_BLUE = 4;   // Pin for the blue component of RGB LED
 
-// LED D4 and D5 Pins and PWM settings
+// SYS LED D4 and D5 Pins and PWM settings
 constexpr int SYS_LED_D4 = 12;        // Pin to LED D4, used for wifi connection failure indication
 constexpr int SYS_LED_D5 = 13;        // Pin to LED D5, used for sensor reading error indication
 constexpr int SYS_LED_D4_CHANNEL = 0; // LEDC channel for LED D4
