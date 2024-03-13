@@ -37,35 +37,35 @@
 // **********************************
 // Libraries Import
 // **********************************
-#include <Arduino.h>          // Include the Arduino base library
-#include "DHT.h"              // Include the library for the DHT sensor
-#include <WiFi.h>             // Include the WiFi library
-#include <ESP32Ping.h>        // Include the Ping library
-#include <WiFiClientSecure.h> // Include the WiFiClientSecure library
-#include <time.h>             // Include the time library
-#include <ArduinoJson.h>      // Include the ArduinoJson library
-#include "SecureCredentials.h"          // Include the secrets file
-#include <Update.h>           // Include the Update library
-#include <PubSubClient.h>     // Include the PubSubClient library
-#include "HardwareInfo.h"     // Include the HardwareInfo class
+#include <Arduino.h>           // Include the Arduino base library
+#include "DHT.h"               // Include the library for the DHT sensor
+#include <WiFi.h>              // Include the WiFi library
+#include <ESP32Ping.h>         // Include the Ping library
+#include <WiFiClientSecure.h>  // Include the WiFiClientSecure library
+#include <time.h>              // Include the time library
+#include <ArduinoJson.h>       // Include the ArduinoJson library
+#include "SecureCredentials.h" // Include the secrets file
+#include <Update.h>            // Include the Update library
+#include <PubSubClient.h>      // Include the PubSubClient library
+#include "HardwareInfo.h"      // Include the HardwareInfo class
 
 // **********************************
 // Constants Declaration
 // **********************************
 
-// ESP32 Reboot Delay
+// * ESP32 Reboot Delay
 constexpr int ESP32_REBOOT_DELAY_MS = 5000; // Delay before rebooting the ESP32
 
-// DHT11 Sensor Pins and Settings
+// * DHT11 Sensor Pins and Settings
 constexpr int DHTPIN = 2;      // Pin connected to the DHT11 data pin
 constexpr int DHTTYPE = DHT11; // Specify DHT11 type
 
-// Data RGB LED Pins
+// * Data RGB LED Pins
 constexpr int DATA_LED_ABOVE_RED = 8;    // Pin for the red component of RGB LED
 constexpr int DATA_LED_NORMAL_GREEN = 9; // Pin for the green component of RGB LED
 constexpr int DATA_LED_BELOW_BLUE = 4;   // Pin for the blue component of RGB LED
 
-// SYS LED D4 and D5 Pins and PWM settings
+// * ESP32 LED D4 and D5 Pins and PWM settings
 constexpr int SYS_LED_D4 = 12;        // Pin to LED D4, used for wifi connection failure indication
 constexpr int SYS_LED_D5 = 13;        // Pin to LED D5, used for sensor reading error indication
 constexpr int SYS_LED_D4_CHANNEL = 0; // LEDC channel for LED D4
@@ -75,7 +75,7 @@ constexpr int SYS_LED_RESOLUTION = 8; // Resolution for LED PWM (8-bit = 0-255)
 constexpr int SYS_LED_ON = 255;       // LED ON state
 constexpr int SYS_LED_OFF = 0;        // LED OFF state
 
-// Buzzer Pins and PWM settings
+// * Buzzer Pins and PWM settings
 constexpr int BUZZER_PIN = 11;          // Pin connected to the Piezo Buzzer
 constexpr int BUZZER_CHANNEL = 2;       // LEDC channel for Piezo Buzzer
 constexpr int BUZZER_FREQ = 2000;       // Frequency for Buzzer PWM
@@ -83,48 +83,43 @@ constexpr int BUZZER_RESOLUTION = 10;   // Resolution for Buzzer PWM (10-bit = 0
 constexpr int BUZZER_VOLUME_HALF = 512; // Half volume for the buzzer
 constexpr int BUZZER_OFF = 0;           // Turn off the buzzer
 
-// Normal operating ranges for temperature and humidity
+// * Normal data ranges for temperature and humidity
 constexpr float TEMP_MIN = 10.0; // Minimum normal temperature
 constexpr float TEMP_MAX = 25.0; // Maximum normal temperature
 constexpr float HUM_MIN = 10.0;  // Minimum normal humidity
 constexpr float HUM_MAX = 80.0;  // Maximum normal humidity
 
-// WiFi and Ping settings
-const char *ssid = WIFI_SSID;                               // WiFi SSID
-const char *password = WIFI_PASSWORD;                       // WiFi password
-const char *host = PING_HOST;                               // Host to ping
-constexpr int MAX_WIFI_CONNECT_ATTEMPTS = 3;                // Maximum number of WiFi connection attempts
-constexpr unsigned long WIFI_CONNECT_RETRY_DELAY_MS = 5000; // Delay between WiFi connection attempts
-
-// NTP settings
-const char *ntpServer = NTP_SERVER;               // NTP server
-constexpr unsigned long NTP_SYNC_DELAY_MS = 1000; // Delay between NTP time sync attempts
-
-// Sensor reading interval
+// * DHT11 reading interval
 constexpr unsigned long sensorReadInterval = 3000; // Interval between sensor readings
 unsigned long lastCheckTime = 0;                   // Last sensor check time
+constexpr int MAX_SENSOR_ERROR_RETRIES = 3;        // Maximum number of sensor error retries
+int sensorErrorCount = 0;                          // Counter for sensor error retries
 
-constexpr int MAX_SENSOR_ERROR_RETRIES = 3; // Maximum number of sensor error retries
-int sensorErrorCount = 0;                   // Counter for sensor error retries
-
-// Blinking control variables
+// * Blinking control variables
 bool shouldBlink = false;                   // Flag for LED blinking state
 unsigned long lastBlinkTime = 0;            // Last time the LED blinked
 constexpr long LED_BLINK_INTERVAL_MS = 100; // Interval between blinks
 int blinkingLED = -1;                       // Assuming -1 as an invalid value indicating no LED is set for blinking.
 
-// Initialize the DHT sensor
-DHT dht(DHTPIN, DHTTYPE); // Initialize DHT sensor
+// * WiFi, Ping and NTP Sync settings
+const char *ssid = WIFI_SSID;                               // WiFi SSID
+const char *password = WIFI_PASSWORD;                       // WiFi password
+const char *host = PING_HOST;                               // Host to ping
+constexpr int MAX_WIFI_CONNECT_ATTEMPTS = 3;                // Maximum number of WiFi connection attempts
+constexpr unsigned long WIFI_CONNECT_RETRY_DELAY_MS = 5000; // Delay between WiFi connection attempts
+const char *ntpServer = NTP_SERVER;                         // NTP server
+constexpr unsigned long NTP_SYNC_DELAY_MS = 1000;           // Delay between NTP time sync attempts
 
-// **********************************
-// AWS IoT Core access settings
-// **********************************
-constexpr char *AWS_IOT_PUBLISH_TOPIC = "DHT11/pub";    // MQTT topic to publish messages
+// * AWS IoT Core access settings
 WiFiClientSecure net = WiFiClientSecure();              // Create a WiFiClientSecure to handle the MQTT connection
 PubSubClient mqttClient(net);                           // Create a PubSubClient to handle the MQTT connection
+constexpr char *AWS_IOT_PUBLISH_TOPIC = "DHT11/pub";    // MQTT topic to publish messages
 constexpr unsigned long MQTT_RECONNECT_DELAY_MS = 3000; // Delay between reconnect attempts
 
-// Declare functions
+// * Initialize the DHT11
+DHT dht(DHTPIN, DHTTYPE); // Initialize DHT sensor
+
+// * Declare functions
 void checkSensorReadings(float &humidity, float &temperatureC, float &temperatureF); // Function to read and process sensor data
 void updateRGBLEDs(bool red, bool green, bool blue);                                 // Function to update the RGB LED
 void indicateNormalCondition();                                                      // Function to indicate normal conditions
@@ -140,7 +135,7 @@ void connectAWS();                                                              
 void mqttPublishMessage(float humidity, float temperatureC, float temperatureF);     // Function to publish message to AWS IoT Core
 
 // **********************************
-// Setup Function
+// & Setup Function
 // **********************************
 void setup()
 {
@@ -176,16 +171,16 @@ void setup()
 }
 
 // **********************************
-// Main loop
+// & Main loop
 // **********************************
 void loop()
 {
-    static float humidity = 0;
-    static float temperatureC = 0;
-    static float temperatureF = 0;
+    static float humidity = 0;     // Initialize humidity variable
+    static float temperatureC = 0; // Initialize temperature in Celsius variable
+    static float temperatureF = 0; // Initialize temperature in Fahrenheit variable
 
     unsigned long currentMillis = millis();
-    if (currentMillis - lastCheckTime >= sensorReadInterval)
+    if (currentMillis - lastCheckTime >= sensorReadInterval) // Check if it's time to read the sensor
     {
         lastCheckTime = currentMillis;
         checkSensorReadings(humidity, temperatureC, temperatureF); // Read sensor and update humidity and temperature
@@ -193,7 +188,7 @@ void loop()
         // Only publish if readings are valid (Not NaN)
         if (!isnan(humidity) && !isnan(temperatureC))
         {
-            mqttPublishMessage(humidity, temperatureC, temperatureF);
+            mqttPublishMessage(humidity, temperatureC, temperatureF); // Publish message to AWS IoT Core
         }
     }
 
@@ -201,18 +196,18 @@ void loop()
 }
 
 // **********************************
-// Functions  Definition
+// & Functions  Definition
 // **********************************
 void checkSensorReadings(float &humidity, float &temperatureC, float &temperatureF)
 {
-    humidity = dht.readHumidity();
-    temperatureC = dht.readTemperature();     // Celsius
-    temperatureF = dht.readTemperature(true); // Fahrenheit
+    humidity = dht.readHumidity();            // Read humidity
+    temperatureC = dht.readTemperature();     // Read temperature in Celsius
+    temperatureF = dht.readTemperature(true); // Read temperature in Fahrenheit
 
     // Validation and action based on the read values
-    if (isnan(humidity) || isnan(temperatureC) || isnan(temperatureF))
+    if (isnan(humidity) || isnan(temperatureC) || isnan(temperatureF)) // Check if any of the readings are NaN
     {
-        indicateSensorError();
+        indicateSensorError(); // Indicate sensor error
     }
     else
     {
@@ -225,54 +220,55 @@ void checkSensorReadings(float &humidity, float &temperatureC, float &temperatur
         Serial.println("F");
 
         // Condition indications based on readings
-        if (temperatureC >= TEMP_MIN && temperatureC <= TEMP_MAX && humidity >= HUM_MIN && humidity <= HUM_MAX)
+        if (temperatureC >= TEMP_MIN && temperatureC <= TEMP_MAX && humidity >= HUM_MIN && humidity <= HUM_MAX) // Check if readings are within normal range
         {
-            indicateNormalCondition();
+            indicateNormalCondition(); // Indicate normal condition
         }
-        else if (temperatureC < TEMP_MIN || humidity < HUM_MIN)
+        else if (temperatureC < TEMP_MIN || humidity < HUM_MIN) // Check if readings are below normal range
+
         {
-            indicateConditionBelowRange();
+            indicateConditionBelowRange(); // Indicate condition below range
         }
         else
         {
-            indicateConditionAboveRange();
+            indicateConditionAboveRange(); // Indicate condition above range
         }
     }
 }
 
-void updateRGBLEDs(bool red, bool green, bool blue)
+void updateRGBLEDs(bool red, bool green, bool blue) // Function to update the RGB LED
 {
-    digitalWrite(DATA_LED_ABOVE_RED, red ? HIGH : LOW);
-    digitalWrite(DATA_LED_NORMAL_GREEN, green ? HIGH : LOW);
-    digitalWrite(DATA_LED_BELOW_BLUE, blue ? HIGH : LOW);
+    digitalWrite(DATA_LED_ABOVE_RED, red ? HIGH : LOW);      // Turn on or off the red LED
+    digitalWrite(DATA_LED_NORMAL_GREEN, green ? HIGH : LOW); // Turn on or off the green LED
+    digitalWrite(DATA_LED_BELOW_BLUE, blue ? HIGH : LOW);    // Turn on or off the blue LED
 }
 
-void indicateNormalCondition()
+void indicateNormalCondition() // Function to indicate normal conditions
 {
     shouldBlink = false;                        // Stop blinking
     updateRGBLEDs(false, true, false);          // Turn on GREEN LED, off others
-    ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_OFF); // Turn LED D5 solid red
+    ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_OFF); // Turn LED D5 off
     ledcWrite(BUZZER_CHANNEL, BUZZER_OFF);      // Mute the buzzer
     Serial.println("Current LED Color: GREEN"); // Print current LED color
 }
 
-void indicateConditionBelowRange()
+void indicateConditionBelowRange() // Function to indicate condition below range
 {
-    shouldBlink = true;
-    ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_OFF);         // Turn LED D5 solid red
-    blinkingLED = DATA_LED_BELOW_BLUE;                  // Indicate that the blue LED should blink
+    shouldBlink = true;                                 // Indicate that the blue LED should blink
+    ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_OFF);         // Turn LED D5 off
+    blinkingLED = DATA_LED_BELOW_BLUE;                  // Blink the blue LED
     Serial.println("Current LED Color: BLUE Blinking"); // Updated print statement
 }
 
-void indicateConditionAboveRange()
+void indicateConditionAboveRange() // Function to indicate condition above range
 {
-    shouldBlink = true;
-    ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_OFF);        // Turn LED D5 solid red
-    blinkingLED = DATA_LED_ABOVE_RED;                  // Indicate that the red LED should blink
+    shouldBlink = true;                                // Indicate that the red LED should blink
+    ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_OFF);        // Turn LED D5 off
+    blinkingLED = DATA_LED_ABOVE_RED;                  // Blink the red LED
     Serial.println("Current LED Color: RED Blinking"); // Updated print statement
 }
 
-void indicateSensorError()
+void indicateSensorError() // Function to indicate sensor error
 {
     sensorErrorCount++; // Increment the sensor error count
 
@@ -287,13 +283,13 @@ void indicateSensorError()
     updateRGBLEDs(false, false, false);            // Turn off all LEDs
     ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_ON);     // Turn LED D5 solid red
     ledcWrite(BUZZER_CHANNEL, BUZZER_VOLUME_HALF); // Set buzzer to half volume
-    Serial.println("Sensor Error!");               // Inform the user
+    Serial.println("Sensor Error!");               // Print sensor error message
 }
 
-void ledBlinking()
+void ledBlinking() // Function to handle LED blinking and buzzer beeping
 {
-    if (!shouldBlink)
-        return; // Exit if blinking is not enabled
+    if (!shouldBlink) // Check if blinking is not enabled
+        return;       // Exit if blinking is not enabled
 
     unsigned long currentMillis = millis();                     // Get current time
     if (currentMillis - lastBlinkTime >= LED_BLINK_INTERVAL_MS) // Check if it's time to toggle the LED state
@@ -317,14 +313,14 @@ void ledBlinking()
     }
 }
 
-void connectToWiFi()
+void connectToWiFi() // Function to connect to WiFi
 {
     Serial.println("Connecting to WiFi...");
     WiFi.mode(WIFI_STA);        // Set WiFi mode to station to connect to a WiFi network
     WiFi.begin(ssid, password); // Start the connection process
 
-    int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < MAX_WIFI_CONNECT_ATTEMPTS)
+    int attempts = 0;                                                             // Initialize the number of connection attempts
+    while (WiFi.status() != WL_CONNECTED && attempts < MAX_WIFI_CONNECT_ATTEMPTS) // Check if WiFi is not connected and the number of attempts is less than the maximum
     {
         delay(WIFI_CONNECT_RETRY_DELAY_MS); // Wait 5 seconds between attempts
         attempts++;
@@ -332,15 +328,15 @@ void connectToWiFi()
         Serial.print(attempts);
         Serial.println(": Trying to connect to WiFi...");
 
-        if (attempts >= 1)
+        if (attempts >= 1) // Check if the number of attempts is greater than or equal to 1
         {
             // Immediately turn on LED D4 solidly after the first failed attempt
-            ledcWrite(SYS_LED_D4_CHANNEL, SYS_LED_ON);
+            ledcWrite(SYS_LED_D4_CHANNEL, SYS_LED_ON);     // Turn on LED D4 when WiFi is not connected
             ledcWrite(BUZZER_CHANNEL, BUZZER_VOLUME_HALF); // Set buzzer to half volume
         }
     }
 
-    if (WiFi.status() == WL_CONNECTED)
+    if (WiFi.status() == WL_CONNECTED) // Check if WiFi is connected
     {
         // If connected successfully, turn off LED D4 and print the IP address and RSSI
         Serial.println("Connected to WiFi successfully!");
@@ -364,7 +360,7 @@ void connectToWiFi()
     }
 }
 
-void pingHost()
+void pingHost() // Function to ping a host
 {
     Serial.print("Pinging host: " + String(host) + "...");
 
@@ -378,14 +374,12 @@ void pingHost()
     }
 }
 
-void initNTP()
+void initNTP() // Function to initialize NTP
 {
     configTime(GMT_OFFSET_SEC, DST_OFFSET_SEC, ntpServer); // Use GMT and DST offsets directly
 
     Serial.println("Initializing NTP...");
-
-    // Wait until time has been retrieved
-    struct tm timeinfo;
+    struct tm timeinfo; // Create a timeinfo struct
     while (!getLocalTime(&timeinfo))
     {
         Serial.println("Waiting for NTP time sync...");
@@ -398,9 +392,9 @@ void initNTP()
     Serial.println(timeStr);
 }
 
-void printLocalTime()
+void printLocalTime() // Function to print local time
 {
-    struct tm timeinfo;
+    struct tm timeinfo; // Create a timeinfo struct
     if (!getLocalTime(&timeinfo))
     {
         Serial.println("Failed to obtain time");
@@ -409,48 +403,40 @@ void printLocalTime()
     Serial.println(&timeinfo, "Current time: %A, %B %d %Y %H:%M:%S");
 }
 
-// Connect to AWS IoT Core
-void connectAWS()
+void connectAWS() // Function to connect to AWS IoT Core
 {
     // Configure WiFiClientSecure to use the AWS IoT device credentials
-    net.setCACert(AWS_ROOT_CA);
-    net.setCertificate(AWS_CERT_CRT);
-    net.setPrivateKey(AWS_PRIVATE_KEY);
+    net.setCACert(AWS_ROOT_CA);         // Set the AWS Root CA certificate
+    net.setCertificate(AWS_CERT_CRT);   // Set the device certificate
+    net.setPrivateKey(AWS_PRIVATE_KEY); // Set the private key
 
     // Set the AWS IoT endpoint and port
     mqttClient.setServer(AWS_IOT_MQTT_SERVER, AWS_IOT_MQTT_PORT);
 
     Serial.println("Connecting to AWS IOT Core");
 
-    while (!mqttClient.connect(AWS_IOT_THING_NAME))
+    while (!mqttClient.connect(AWS_IOT_THING_NAME)) // Connect to AWS IoT Core
     {
         Serial.print(".");
         delay(MQTT_RECONNECT_DELAY_MS);
     }
 
-    if (!mqttClient.connected())
+    if (!mqttClient.connected()) // Check if the client is connected
     {
         Serial.println("AWS IoT Core connection is failed!");
         return;
     }
     Serial.println("AWS IoT Core is connected successfully!");
 }
-// Declare functions
-void mqttPublishMessage(float humidity, float temperatureC, float temperatureF)
+
+void mqttPublishMessage(float humidity, float temperatureC, float temperatureF) // Function to publish message to AWS IoT Core
 {
-    if (!mqttClient.connected())
+    if (!mqttClient.connected()) // Check if the client is connected
     {
-        connectAWS();
+        connectAWS(); // Connect to AWS IoT Core if not connected
     }
 
-    struct tm timeinfo;
-    if (!getLocalTime(&timeinfo))
-    {
-        Serial.println("Failed to obtain NTP time.");
-        return;
-    }
-
-    DynamicJsonDocument doc(ESP.getMaxAllocHeap());
+    DynamicJsonDocument doc(ESP.getMaxAllocHeap()); // Create a JSON document with the maximum heap size
     doc["mqttTopic"] = AWS_IOT_PUBLISH_TOPIC;
     doc["deviceType"] = "Sensor";
     doc["deviceFunction"] = "Temperature and Humidity";
@@ -463,17 +449,9 @@ void mqttPublishMessage(float humidity, float temperatureC, float temperatureF)
     doc["IP"] = WiFi.localIP().toString();
     doc["RSSI"] = WiFi.RSSI();
 
-    Serial.print("Heap Size: ");
-    Serial.print(ESP.getHeapSize());
-    Serial.println(" bytes");
-
-    Serial.print("Max Alloc Heap: ");
-    Serial.print(ESP.getMaxAllocHeap());
-    Serial.println(" bytes");
-
     // Print out the JSON document to the Serial Monitor
     Serial.print("Publishing message: ");
-    serializeJson(doc, Serial);
+    serializeJson(doc, Serial); // Serialize the JSON document
     Serial.println();
 
     // Determine buffer size
