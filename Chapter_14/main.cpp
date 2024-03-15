@@ -57,8 +57,8 @@
 constexpr int ESP32_REBOOT_DELAY_MS = 5000; // Delay before rebooting the ESP32
 
 // * DHT11 Sensor Pins and Settings
-constexpr int DHTPIN = 2;      // Pin connected to the DHT11 data pin
-constexpr int DHTTYPE = DHT11; // Specify DHT11 type
+constexpr int DHT_PIN = 2;      // Pin connected to the DHT11 data pin
+constexpr int DHT_TYPE = DHT11; // Specify DHT11 type
 
 // * Data RGB LED Pins
 constexpr int DATA_LED_ABOVE_RED = 8;    // Pin for the red component of RGB LED
@@ -90,16 +90,27 @@ constexpr float HUM_MIN = 10.0;  // Minimum normal humidity
 constexpr float HUM_MAX = 80.0;  // Maximum normal humidity
 
 // * DHT11 reading interval
-constexpr unsigned long sensorReadInterval = 3000; // Interval between sensor readings
-unsigned long lastCheckTime = 0;                   // Last sensor check time
-constexpr int MAX_SENSOR_ERROR_RETRIES = 3;        // Maximum number of sensor error retries
-int sensorErrorCount = 0;                          // Counter for sensor error retries
+constexpr unsigned long SENSOR_READ_INTERVAL = 3000; // Interval between sensor readings
+unsigned long lastCheckTime = 0;                     // Last sensor check time
+constexpr int MAX_SENSOR_ERROR_RETRIES = 3;          // Maximum number of sensor error retries
+int sensorErrorCount = 0;                            // Counter for sensor error retries
+
+// * Data ranges for condition status
+enum ConditionStatus
+{
+    Normal,
+    BelowNormal,
+    AboveNormal,
+    Error // Optional, if you want to handle sensor error status
+};
+
+ConditionStatus currentCondition = Error; // Default to Error until the first successful reading
 
 // * Blinking control variables
-bool shouldBlink = false;                   // Flag for LED blinking state
-unsigned long lastBlinkTime = 0;            // Last time the LED blinked
-constexpr long LED_BLINK_INTERVAL_MS = 100; // Interval between blinks
-int blinkingLED = -1;                       // Assuming -1 as an invalid value indicating no LED is set for blinking.
+bool shouldBlink = false;                        // Flag for LED blinking state
+unsigned long lastBlinkTime = 0;                 // Last time the LED blinked
+constexpr long DATA_LED_BLINK_INTERVAL_MS = 100; // Interval between blinks
+int blinkingLED = -1;                            // Assuming -1 as an invalid value indicating no LED is set for blinking.
 
 // * WiFi, Ping and NTP Sync settings
 const char *ssid = WIFI_SSID;                               // WiFi SSID
@@ -113,11 +124,12 @@ constexpr unsigned long NTP_SYNC_DELAY_MS = 1000;           // Delay between NTP
 // * AWS IoT Core access settings
 WiFiClientSecure net = WiFiClientSecure();              // Create a WiFiClientSecure to handle the MQTT connection
 PubSubClient mqttClient(net);                           // Create a PubSubClient to handle the MQTT connection
-constexpr char *AWS_IOT_PUBLISH_TOPIC = "DHT11/pub";    // MQTT topic to publish messages
 constexpr unsigned long MQTT_RECONNECT_DELAY_MS = 3000; // Delay between reconnect attempts
+String deviceID;                                        // Device ID for the AWS IoT Core
+String AWS_IOT_PUBLISH_TOPIC;                           // MQTT topic to publish messages
 
 // * Initialize the DHT11
-DHT dht(DHTPIN, DHTTYPE); // Initialize DHT sensor
+DHT dht(DHT_PIN, DHT_TYPE); // Initialize DHT sensor
 
 // * Declare functions
 void checkSensorReadings(float &humidity, float &temperatureC, float &temperatureF); // Function to read and process sensor data
@@ -142,6 +154,9 @@ void setup()
     Serial.begin(115200); // Initialize serial communication
 
     HardwareInfo::displayHardwareInfo(); // Display hardware information
+
+    deviceID = String(ESP.getEfuseMac(), HEX); // Get the device ID
+    AWS_IOT_PUBLISH_TOPIC = deviceID + "/pub"; // Set the MQTT topic to publish messages
 
     dht.begin(); // Initialize the DHT sensor
 
@@ -180,7 +195,7 @@ void loop()
     static float temperatureF = 0; // Initialize temperature in Fahrenheit variable
 
     unsigned long currentMillis = millis();
-    if (currentMillis - lastCheckTime >= sensorReadInterval) // Check if it's time to read the sensor
+    if (currentMillis - lastCheckTime >= SENSOR_READ_INTERVAL) // Check if it's time to read the sensor
     {
         lastCheckTime = currentMillis;
         checkSensorReadings(humidity, temperatureC, temperatureF); // Read sensor and update humidity and temperature
@@ -207,7 +222,8 @@ void checkSensorReadings(float &humidity, float &temperatureC, float &temperatur
     // Validation and action based on the read values
     if (isnan(humidity) || isnan(temperatureC) || isnan(temperatureF)) // Check if any of the readings are NaN
     {
-        indicateSensorError(); // Indicate sensor error
+        indicateSensorError();    // Indicate sensor error
+        currentCondition = Error; // Set current condition to Error
     }
     else
     {
@@ -223,15 +239,18 @@ void checkSensorReadings(float &humidity, float &temperatureC, float &temperatur
         if (temperatureC >= TEMP_MIN && temperatureC <= TEMP_MAX && humidity >= HUM_MIN && humidity <= HUM_MAX) // Check if readings are within normal range
         {
             indicateNormalCondition(); // Indicate normal condition
+            currentCondition = Normal; // Set current condition to Normal
         }
         else if (temperatureC < TEMP_MIN || humidity < HUM_MIN) // Check if readings are below normal range
 
         {
-            indicateConditionBelowRange(); // Indicate condition below range
+            indicateConditionBelowRange();  // Indicate condition below range
+            currentCondition = BelowNormal; // Set current condition to BelowNormal
         }
         else
         {
-            indicateConditionAboveRange(); // Indicate condition above range
+            indicateConditionAboveRange();  // Indicate condition above range
+            currentCondition = AboveNormal; // Set current condition to AboveNormal
         }
     }
 }
@@ -291,8 +310,8 @@ void ledBlinking() // Function to handle LED blinking and buzzer beeping
     if (!shouldBlink) // Check if blinking is not enabled
         return;       // Exit if blinking is not enabled
 
-    unsigned long currentMillis = millis();                     // Get current time
-    if (currentMillis - lastBlinkTime >= LED_BLINK_INTERVAL_MS) // Check if it's time to toggle the LED state
+    unsigned long currentMillis = millis();                          // Get current time
+    if (currentMillis - lastBlinkTime >= DATA_LED_BLINK_INTERVAL_MS) // Check if it's time to toggle the LED state
     {
         lastBlinkTime = currentMillis; // Update the last blink time
         static bool ledState = false;  // Toggle state variable
@@ -415,7 +434,7 @@ void connectAWS() // Function to connect to AWS IoT Core
 
     Serial.println("Connecting to AWS IOT Core");
 
-    while (!mqttClient.connect(AWS_IOT_THING_NAME)) // Connect to AWS IoT Core
+    while (!mqttClient.connect(deviceID.c_str())) // Connect to AWS IoT Core
     {
         Serial.print(".");
         delay(MQTT_RECONNECT_DELAY_MS);
@@ -436,15 +455,33 @@ void mqttPublishMessage(float humidity, float temperatureC, float temperatureF) 
         connectAWS(); // Connect to AWS IoT Core if not connected
     }
 
+    String conditionStr;
+    switch (currentCondition)
+    {
+    case Normal:
+        conditionStr = "Normal";
+        break;
+    case BelowNormal:
+        conditionStr = "Below Normal";
+        break;
+    case AboveNormal:
+        conditionStr = "Above Normal";
+        break;
+    case Error:
+    default:
+        conditionStr = "Error"; // Handle the error or uninitialized state
+        break;
+    }
+
     DynamicJsonDocument doc(ESP.getMaxAllocHeap()); // Create a JSON document with the maximum heap size
-    doc["mqttTopic"] = AWS_IOT_PUBLISH_TOPIC;
     doc["deviceType"] = "Sensor";
     doc["deviceFunction"] = "Temperature and Humidity";
     doc["deviceModel"] = "DHT11";
     doc["deviceID"] = String(ESP.getEfuseMac(), HEX);
-    doc["temp_C"] = String(temperatureC, 2);
-    doc["temp_F"] = String(temperatureF, 2);
+    doc["temp_C"] = temperatureC;
+    doc["temp_F"] = round(temperatureF);
     doc["humidity"] = humidity;
+    doc["status"] = conditionStr;
     doc["SSID"] = WiFi.SSID();
     doc["IP"] = WiFi.localIP().toString();
     doc["RSSI"] = WiFi.RSSI();
@@ -462,7 +499,7 @@ void mqttPublishMessage(float humidity, float temperatureC, float temperatureF) 
     char jsonBuffer[jsonSize];
     serializeJson(doc, jsonBuffer, sizeof(jsonBuffer));
 
-    if (!mqttClient.publish(AWS_IOT_PUBLISH_TOPIC, jsonBuffer))
+    if (!mqttClient.publish(AWS_IOT_PUBLISH_TOPIC.c_str(), jsonBuffer))
     {
         Serial.println("Publish failed");
     }
