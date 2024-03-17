@@ -1,6 +1,6 @@
 // **********************************
 // Created by: ESP32 Coding Assistant
-// Creation Date: 2024-03-12
+// Creation Date: 2024-03-16
 // **********************************
 // Code Explanation
 // **********************************
@@ -19,13 +19,14 @@
 // New Created Function/Class:
 // - checkSensorReadings()
 // - indicateNormalCondition()
-// - indicateAbnormalCondition()
+// - indicateConditionBelowRange()
+// - indicateConditionAboveRange()
 // - indicateSensorError()
-// - ledBlinking()
-// - updateRGBLEDs()
+// - blinkLEDs()
+// - updateStatusLEDs()
 // - connectToWiFi()
 // - pingHost()
-// - initNTP()
+// - syncNTP()
 // - connectAWS()
 // - mqttPublishMessage()
 // Security Considerations:
@@ -35,7 +36,7 @@
 // - Test under known temperature and humidity conditions to validate sensor readings.
 // - Simulate error conditions by disconnecting the sensor.
 // **********************************
-// Libraries Import
+// * Libraries Import
 // **********************************
 #include <Arduino.h>           // Include the Arduino base library
 #include "DHT.h"               // Include the library for the DHT sensor
@@ -50,7 +51,7 @@
 #include "HardwareInfo.h"      // Include the HardwareInfo class
 
 // **********************************
-// Constants Declaration
+// * Constants Declaration
 // **********************************
 
 // * ESP32 Reboot Delay
@@ -96,18 +97,17 @@ constexpr int MAX_SENSOR_ERROR_RETRIES = 3;          // Maximum number of sensor
 int sensorErrorCount = 0;                            // Counter for sensor error retries
 
 // * Data ranges for condition status
-enum ConditionStatus
+enum SensorConditionStatus
 {
     Normal,
     BelowNormal,
     AboveNormal,
-    Error // Optional, if you want to handle sensor error status
+    SensorError,
 };
-
-ConditionStatus currentCondition = Error; // Default to Error until the first successful reading
+SensorConditionStatus currentCondition = SensorError; // Default to Error until the first successful reading
 
 // * Blinking control variables
-bool shouldBlink = false;                        // Flag for LED blinking state
+bool isBlinkingEnabled = false;                        // Flag for LED blinking state
 unsigned long lastBlinkTime = 0;                 // Last time the LED blinked
 constexpr long DATA_LED_BLINK_INTERVAL_MS = 100; // Interval between blinks
 int blinkingLED = -1;                            // Assuming -1 as an invalid value indicating no LED is set for blinking.
@@ -132,19 +132,23 @@ String AWS_IOT_PUBLISH_TOPIC;                           // MQTT topic to publish
 DHT dht(DHT_PIN, DHT_TYPE); // Initialize DHT sensor
 
 // * Declare functions
-void checkSensorReadings(float &humidity, float &temperatureC, float &temperatureF); // Function to read and process sensor data
-void updateRGBLEDs(bool red, bool green, bool blue);                                 // Function to update the RGB LED
-void indicateNormalCondition();                                                      // Function to indicate normal conditions
-void indicateConditionBelowRange();                                                  // Function to indicate condition below range
-void indicateConditionAboveRange();                                                  // Function to indicate condition above range
-void indicateSensorError();                                                          // Function to indicate sensor error
-void ledBlinking();                                                                  // Function to handle LED blinking and buzzer beeping
-void connectToWiFi();                                                                // Function to connect to WiFi
-void pingHost();                                                                     // Function to ping a host
-void initNTP();                                                                      // Function to initialize NTP
-void printLocalTime();                                                               // Function to print local time
-void connectAWS();                                                                   // Function to connect to AWS IoT Core
-void mqttPublishMessage(float humidity, float temperatureC, float temperatureF);     // Function to publish message to AWS IoT Core
+void checkSensorReadings(float &humidity, float &temperatureC, float &temperatureF);                        // Function to read and process sensor data
+void updateStatusLEDs(bool isRedOn, bool isGreenOn, bool isBlueOn);                                                     // Function to update the RGB LED
+void indicateNormalCondition();                                                                             // Function to indicate normal conditions
+void indicateConditionBelowRange();                                                                         // Function to indicate condition below range
+void indicateConditionAboveRange();                                                                         // Function to indicate condition above range
+void indicateSensorError();                                                                                 // Function to indicate sensor error
+void blinkLEDs();                                                                                           // Function to handle LED blinking and buzzer beeping
+void connectToWiFi();                                                                                       // Function to connect to WiFi
+void pingHost();                                                                                            // Function to ping a host
+void syncNTP();                                                                                             // Function to initialize NTP
+void connectAWS();                                                                                          // Function to connect to AWS IoT Core
+void mqttPublishMessage(float humidity, float temperatureC, float temperatureF, SensorConditionStatus condition); // Function to publish message to AWS IoT Core
+
+String calculateTimezoneString(long offsetSec, long dstOffsetSec);
+String checkDSTStatus(long dstOffsetSec);
+String timezoneStr;
+String dstStatus;
 
 // **********************************
 // & Setup Function
@@ -153,10 +157,15 @@ void setup()
 {
     Serial.begin(115200); // Initialize serial communication
 
+    Serial.println("Initializing system......");
+
     HardwareInfo::displayHardwareInfo(); // Display hardware information
 
     deviceID = String(ESP.getEfuseMac(), HEX); // Get the device ID
     AWS_IOT_PUBLISH_TOPIC = deviceID + "/pub"; // Set the MQTT topic to publish messages
+
+    timezoneStr = calculateTimezoneString(GMT_OFFSET_SEC, DST_OFFSET_SEC);
+    dstStatus = checkDSTStatus(DST_OFFSET_SEC);
 
     dht.begin(); // Initialize the DHT sensor
 
@@ -181,8 +190,9 @@ void setup()
 
     connectToWiFi(); // Connect to WiFi
     pingHost();      // Ping the host
-    initNTP();       // Initialize NTP
-    connectAWS();    // Connect to AWS IoT Core
+    syncNTP();       // Initialize NTP
+    configTime(GMT_OFFSET_SEC, DST_OFFSET_SEC, ntpServer);
+    connectAWS(); // Connect to AWS IoT Core
 }
 
 // **********************************
@@ -190,24 +200,40 @@ void setup()
 // **********************************
 void loop()
 {
-    static float humidity = 0;     // Initialize humidity variable
-    static float temperatureC = 0; // Initialize temperature in Celsius variable
-    static float temperatureF = 0; // Initialize temperature in Fahrenheit variable
-
+    static float humidity = 0;
+    static float temperatureC = 0;
+    static float temperatureF = 0;
     unsigned long currentMillis = millis();
-    if (currentMillis - lastCheckTime >= SENSOR_READ_INTERVAL) // Check if it's time to read the sensor
+
+    if (currentMillis - lastCheckTime >= SENSOR_READ_INTERVAL)
     {
         lastCheckTime = currentMillis;
         checkSensorReadings(humidity, temperatureC, temperatureF); // Read sensor and update humidity and temperature
 
-        // Only publish if readings are valid (Not NaN)
-        if (!isnan(humidity) && !isnan(temperatureC))
+        if (!isnan(humidity) && !isnan(temperatureC)) // Check if the readings are valid
         {
-            mqttPublishMessage(humidity, temperatureC, temperatureF); // Publish message to AWS IoT Core
+            // Reset sensor error count upon successful reading
+            sensorErrorCount = 0;
+
+            // Publish message to AWS IoT Core
+            mqttPublishMessage(humidity, temperatureC, temperatureF, currentCondition);
+        }
+        else
+        {
+            // Handle sensor errors
+            sensorErrorCount++; // Increment sensor error count
+            if (sensorErrorCount >= MAX_SENSOR_ERROR_RETRIES)
+            {
+                Serial.println("Maximum sensor error retries reached. Rebooting...");
+                delay(ESP32_REBOOT_DELAY_MS);
+                ESP.restart(); // Reboot the device
+            }
+            // Publish sensor error to AWS IoT Core
+            mqttPublishMessage(NAN, NAN, NAN, currentCondition); //
         }
     }
 
-    ledBlinking(); // Handle LED blinking and buzzer beeping
+    blinkLEDs(); // Handle LED blinking and buzzer beeping
 }
 
 // **********************************
@@ -222,8 +248,8 @@ void checkSensorReadings(float &humidity, float &temperatureC, float &temperatur
     // Validation and action based on the read values
     if (isnan(humidity) || isnan(temperatureC) || isnan(temperatureF)) // Check if any of the readings are NaN
     {
-        indicateSensorError();    // Indicate sensor error
-        currentCondition = Error; // Set current condition to Error
+        indicateSensorError();          // Indicate sensor error
+        currentCondition = SensorError; // Set current condition to Error
     }
     else
     {
@@ -255,17 +281,17 @@ void checkSensorReadings(float &humidity, float &temperatureC, float &temperatur
     }
 }
 
-void updateRGBLEDs(bool red, bool green, bool blue) // Function to update the RGB LED
+void updateStatusLEDs(bool isRedOn, bool isGreenOn, bool isBlueOn) // Function to update the RGB LED
 {
-    digitalWrite(DATA_LED_ABOVE_RED, red ? HIGH : LOW);      // Turn on or off the red LED
-    digitalWrite(DATA_LED_NORMAL_GREEN, green ? HIGH : LOW); // Turn on or off the green LED
-    digitalWrite(DATA_LED_BELOW_BLUE, blue ? HIGH : LOW);    // Turn on or off the blue LED
+    digitalWrite(DATA_LED_ABOVE_RED, isRedOn ? HIGH : LOW);      // Turn on or off the red LED
+    digitalWrite(DATA_LED_NORMAL_GREEN, isGreenOn ? HIGH : LOW); // Turn on or off the green LED
+    digitalWrite(DATA_LED_BELOW_BLUE, isBlueOn ? HIGH : LOW);    // Turn on or off the blue LED
 }
 
 void indicateNormalCondition() // Function to indicate normal conditions
 {
-    shouldBlink = false;                        // Stop blinking
-    updateRGBLEDs(false, true, false);          // Turn on GREEN LED, off others
+    isBlinkingEnabled = false;                        // Stop blinking
+    updateStatusLEDs(false, true, false);       // Turn on GREEN LED, off others
     ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_OFF); // Turn LED D5 off
     ledcWrite(BUZZER_CHANNEL, BUZZER_OFF);      // Mute the buzzer
     Serial.println("Current LED Color: GREEN"); // Print current LED color
@@ -273,7 +299,7 @@ void indicateNormalCondition() // Function to indicate normal conditions
 
 void indicateConditionBelowRange() // Function to indicate condition below range
 {
-    shouldBlink = true;                                 // Indicate that the blue LED should blink
+    isBlinkingEnabled = true;                                 // Indicate that the blue LED should blink
     ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_OFF);         // Turn LED D5 off
     blinkingLED = DATA_LED_BELOW_BLUE;                  // Blink the blue LED
     Serial.println("Current LED Color: BLUE Blinking"); // Updated print statement
@@ -281,7 +307,7 @@ void indicateConditionBelowRange() // Function to indicate condition below range
 
 void indicateConditionAboveRange() // Function to indicate condition above range
 {
-    shouldBlink = true;                                // Indicate that the red LED should blink
+    isBlinkingEnabled = true;                                // Indicate that the red LED should blink
     ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_OFF);        // Turn LED D5 off
     blinkingLED = DATA_LED_ABOVE_RED;                  // Blink the red LED
     Serial.println("Current LED Color: RED Blinking"); // Updated print statement
@@ -289,25 +315,16 @@ void indicateConditionAboveRange() // Function to indicate condition above range
 
 void indicateSensorError() // Function to indicate sensor error
 {
-    sensorErrorCount++; // Increment the sensor error count
-
-    // Check if the error count has reached 3
-    if (sensorErrorCount >= MAX_SENSOR_ERROR_RETRIES)
-    {
-        Serial.println("Maximum sensor error retries reached. Rebooting...");
-        delay(ESP32_REBOOT_DELAY_MS); // Short delay to allow the message to be sent before rebooting
-        ESP.restart();                // Reboot the ESP device
-    }
-    shouldBlink = false;                           // Stop blinking
-    updateRGBLEDs(false, false, false);            // Turn off all LEDs
+    isBlinkingEnabled = false;                           // Stop blinking
+    updateStatusLEDs(false, false, false);         // Turn off all LEDs
     ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_ON);     // Turn LED D5 solid red
     ledcWrite(BUZZER_CHANNEL, BUZZER_VOLUME_HALF); // Set buzzer to half volume
     Serial.println("Sensor Error!");               // Print sensor error message
 }
 
-void ledBlinking() // Function to handle LED blinking and buzzer beeping
+void blinkLEDs() // Function to handle LED blinking and buzzer beeping
 {
-    if (!shouldBlink) // Check if blinking is not enabled
+    if (!isBlinkingEnabled) // Check if blinking is not enabled
         return;       // Exit if blinking is not enabled
 
     unsigned long currentMillis = millis();                          // Get current time
@@ -320,11 +337,11 @@ void ledBlinking() // Function to handle LED blinking and buzzer beeping
         // Determine which LED to blink based on the condition
         if (blinkingLED == DATA_LED_BELOW_BLUE)
         {
-            updateRGBLEDs(false, false, ledState); // Blink Blue LED for below range
+            updateStatusLEDs(false, false, ledState); // Blink Blue LED for below range
         }
         else if (blinkingLED == DATA_LED_ABOVE_RED)
         {
-            updateRGBLEDs(ledState, false, false); // Blink Red LED for above range
+            updateStatusLEDs(ledState, false, false); // Blink Red LED for above range
         }
 
         // Synchronize the buzzer beeping with LED blinking
@@ -393,33 +410,43 @@ void pingHost() // Function to ping a host
     }
 }
 
-void initNTP() // Function to initialize NTP
+void syncNTP()
 {
-    configTime(GMT_OFFSET_SEC, DST_OFFSET_SEC, ntpServer); // Use GMT and DST offsets directly
+    Serial.println("Synchronizing NTP now...");
 
-    Serial.println("Initializing NTP...");
-    struct tm timeinfo; // Create a timeinfo struct
+    // Initialize and start the SNTP service.
+    configTime(GMT_OFFSET_SEC, DST_OFFSET_SEC, ntpServer);
+
+    // Wait for time to be set
+    Serial.println("Waiting for NTP time sync...");
+    struct tm timeinfo;
     while (!getLocalTime(&timeinfo))
     {
-        Serial.println("Waiting for NTP time sync...");
+        Serial.println("Fetching NTP time...");
         delay(NTP_SYNC_DELAY_MS);
     }
 
-    // Print the current time
+    // Once synchronized, print the current time
     char timeStr[64];
-    strftime(timeStr, sizeof(timeStr), "Current time: %A, %B %d %Y %H:%M:%S", &timeinfo);
+    strftime(timeStr, sizeof(timeStr), "%A, %B %d %Y %H:%M:%S", &timeinfo);
     Serial.println(timeStr);
 }
 
-void printLocalTime() // Function to print local time
+// Function to determine the timezone string from the offset in seconds
+String calculateTimezoneString(long offsetSec, long dstOffsetSec)
 {
-    struct tm timeinfo; // Create a timeinfo struct
-    if (!getLocalTime(&timeinfo))
-    {
-        Serial.println("Failed to obtain time");
-        return;
-    }
-    Serial.println(&timeinfo, "Current time: %A, %B %d %Y %H:%M:%S");
+    char buffer[10];
+    // Calculate the total offset in hours
+    float totalOffset = offsetSec / 3600.0 + dstOffsetSec / 3600.0;
+    // Format as a string with a sign, e.g., "+02:00"
+    snprintf(buffer, sizeof(buffer), "%+03.0f:00", totalOffset);
+    return String(buffer);
+}
+
+// Function to check DST status based on DST offset
+String checkDSTStatus(long dstOffsetSec)
+{
+    return dstOffsetSec > 0 ? "Yes" : "No";
 }
 
 void connectAWS() // Function to connect to AWS IoT Core
@@ -448,58 +475,63 @@ void connectAWS() // Function to connect to AWS IoT Core
     Serial.println("AWS IoT Core is connected successfully!");
 }
 
-void mqttPublishMessage(float humidity, float temperatureC, float temperatureF) // Function to publish message to AWS IoT Core
+void mqttPublishMessage(float humidity, float temperatureC, float temperatureF, SensorConditionStatus condition) // Function to publish message to AWS IoT Core
 {
     if (!mqttClient.connected()) // Check if the client is connected
     {
         connectAWS(); // Connect to AWS IoT Core if not connected
     }
-
-    String conditionStr;
-    switch (currentCondition)
+    // Fetch the current time
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo))
     {
-    case Normal:
-        conditionStr = "Normal";
-        break;
-    case BelowNormal:
-        conditionStr = "Below Normal";
-        break;
-    case AboveNormal:
-        conditionStr = "Above Normal";
-        break;
-    case Error:
-    default:
-        conditionStr = "Error"; // Handle the error or uninitialized state
-        break;
+        Serial.println("Failed to obtain time");
+        return; // Don't proceed if time couldn't be obtained
     }
 
-    DynamicJsonDocument doc(ESP.getMaxAllocHeap()); // Create a JSON document with the maximum heap size
-    doc["deviceType"] = "Sensor";
-    doc["deviceFunction"] = "Temperature and Humidity";
+    // Format the date and time separately
+    char formattedDate[11]; // Buffer to hold the formatted date "mm-dd-yyyy"
+    char formattedTime[9];  // Buffer to hold the formatted time "hh:mm:ss"
+
+    // Use strftime to format the date and time separately
+    strftime(formattedDate, sizeof(formattedDate), "%m-%d-%Y", &timeinfo);
+    strftime(formattedTime, sizeof(formattedTime), "%H:%M:%S", &timeinfo);
+
+    // Get Unix time
+    time_t unixTime = mktime(&timeinfo);
+
+    String conditionStr = condition == Normal ? "Normal" : condition == BelowNormal ? "Below Normal"
+                                                       : condition == AboveNormal   ? "Above Normal"
+                                                                                    : "Sensor Error";
+
+    // Create a JSON document
+    StaticJsonDocument<256> doc;
+
+    // Populate document
+    doc["timeStamp"] = unixTime;
     doc["deviceModel"] = "DHT11";
     doc["deviceID"] = String(ESP.getEfuseMac(), HEX);
-    doc["temp_C"] = temperatureC;
-    doc["temp_F"] = round(temperatureF);
-    doc["humidity"] = humidity;
     doc["status"] = conditionStr;
-    doc["SSID"] = WiFi.SSID();
-    doc["IP"] = WiFi.localIP().toString();
-    doc["RSSI"] = WiFi.RSSI();
+    doc["date"] = formattedDate;
+    doc["time"] = formattedTime;
+    doc["timeZone"] = timezoneStr;
+    doc["DTS"] = dstStatus;
+    JsonObject data = doc.createNestedObject("data"); // Create a nested object for data
+    data["temp_C"] = temperatureC;
+    data["temp_F"] = round(temperatureF);
+    data["humidity"] = humidity;
 
-    // Print out the JSON document to the Serial Monitor
-    Serial.print("Publishing message: ");
-    serializeJson(doc, Serial); // Serialize the JSON document
-    Serial.println();
+    String jsonString;                    // Create a string to hold the JSON data
+    serializeJson(doc, jsonString);       // Serialize the JSON document to a string
+    Serial.print("Publishing message: "); // Print the message
+    Serial.println(jsonString);           // Print the JSON data
 
     // Determine buffer size
     size_t jsonSize = measureJson(doc) + 1; // +1 for null terminator
     Serial.print("Calculated JSON buffer size: ");
     Serial.println(jsonSize); // Print the buffer size
 
-    char jsonBuffer[jsonSize];
-    serializeJson(doc, jsonBuffer, sizeof(jsonBuffer));
-
-    if (!mqttClient.publish(AWS_IOT_PUBLISH_TOPIC.c_str(), jsonBuffer))
+    if (!mqttClient.publish(AWS_IOT_PUBLISH_TOPIC.c_str(), jsonString.c_str()))
     {
         Serial.println("Publish failed");
     }
