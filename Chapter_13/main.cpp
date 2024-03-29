@@ -1,6 +1,6 @@
 // **********************************
 // Created by: ESP32 Coding Assistant
-// Creation Date: 2024-03-16
+// Creation Date: 2024-03-28
 // **********************************
 // Code Explanation
 // **********************************
@@ -43,7 +43,6 @@
 #include <ESP32Ping.h>         // Include the Ping library
 #include <WiFiClientSecure.h>  // Include the WiFiClientSecure library
 #include <time.h>              // Include the time library
-#include <ArduinoJson.h>       // Include the ArduinoJson library
 #include "SecureCredentials.h" // Include the secrets file
 #include <Update.h>            // Include the Update library
 #include <PubSubClient.h>      // Include the PubSubClient library
