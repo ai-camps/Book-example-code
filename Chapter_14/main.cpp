@@ -145,10 +145,10 @@ void syncNTP();                                                                 
 void connectAWS();                                                                                                // Function to connect to AWS IoT Core
 void mqttPublishMessage(float humidity, float temperatureC, float temperatureF, SensorConditionStatus condition); // Function to publish message to AWS IoT Core
 
-String calculateTimezoneString(long offsetSec, long dstOffsetSec);
-String checkDSTStatus(long dstOffsetSec);
-String timezoneStr;
-String dstStatus;
+String calculateTimezoneString(long offsetSec); // Function to determine the timezone string from the offset in seconds
+String checkDSTStatus(long dstOffsetSec);       // Function to check DST status based on DST offset
+String timezoneStr;                             // String to hold the timezone
+String dstStatus;                               // String to hold the DST status
 
 // **********************************
 // & Setup Function
@@ -164,7 +164,7 @@ void setup()
     deviceID = String(ESP.getEfuseMac(), HEX); // Get the device ID
     AWS_IOT_PUBLISH_TOPIC = deviceID + "/pub"; // Set the MQTT topic to publish messages
 
-    timezoneStr = calculateTimezoneString(GMT_OFFSET_SEC, DST_OFFSET_SEC);
+    timezoneStr = calculateTimezoneString(GMT_OFFSET_SEC); // Calculate timezone string without DST consideration
     dstStatus = checkDSTStatus(DST_OFFSET_SEC);
 
     dht.begin(); // Initialize the DHT sensor
@@ -410,9 +410,9 @@ void pingHost() // Function to ping a host
     }
 }
 
-void syncNTP()
+void syncNTP() // Function to synchronize the NTP time
 {
-    Serial.println("Synchronizing NTP now...");
+    Serial.println("Synchronizing NTP now..."); // Display the message
 
     // Initialize and start the SNTP service.
     configTime(GMT_OFFSET_SEC, DST_OFFSET_SEC, ntpServer);
@@ -433,11 +433,12 @@ void syncNTP()
 }
 
 // Function to determine the timezone string from the offset in seconds
-String calculateTimezoneString(long offsetSec, long dstOffsetSec)
+// Function to determine the timezone string from the offset in seconds
+String calculateTimezoneString(long offsetSec)
 {
     char buffer[10];
     // Calculate the total offset in hours
-    float totalOffset = offsetSec / 3600.0 + dstOffsetSec / 3600.0;
+    float totalOffset = offsetSec / 3600.0;
     // Format as a string with a sign, e.g., "+02:00"
     snprintf(buffer, sizeof(buffer), "%+03.0f:00", totalOffset);
     return String(buffer);
@@ -515,7 +516,7 @@ void mqttPublishMessage(float humidity, float temperatureC, float temperatureF, 
     doc["date"] = formattedDate;
     doc["time"] = formattedTime;
     doc["timeZone"] = timezoneStr;
-    doc["DTS"] = dstStatus;
+    doc["DST"] = dstStatus;
     JsonObject data = doc.createNestedObject("data"); // Create a nested object for data
     data["temp_C"] = temperatureC;
     data["temp_F"] = round(temperatureF);
