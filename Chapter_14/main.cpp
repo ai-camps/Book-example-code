@@ -1,22 +1,22 @@
 // **********************************
-// Created by: ESP32 Coding Assistant
-// Creation Date: 2024-03-16
+// * Created by: ESP32 Coding Assistant
+// * Creation Date: 2024-04-15
 // **********************************
-// Code Explanation
+// * Code Explanation
 // **********************************
-// Code Purpose:
+// * Code Purpose:
 // This code is designed to periodically read temperature and humidity data from a DHT11 sensor
 // and provide visual and sound indications based on the data's normality or abnormality,
 // and handle sensor reading errors.
-// Requirement Summary:
+// * Requirement Summary:
 // - Periodically read from DHT11 sensor connected to IO2.
 // - Indicate conditions via LEDs and Piezo Buzzer connected to IO11, IO12, and IO13.
-// Hardware Connection:
+// * Hardware Connection:
 // - DHT11 data pin -> IO2
 // - Piezo Buzzer -> IO11
 // - RGB LED Red -> IO8, Green -> IO9, Blue -> IO4
 // - LED D4 -> IO12, LED D5 -> IO13
-// New Created Function/Class:
+// * New Created Function/Class:
 // - checkSensorReadings()
 // - indicateNormalCondition()
 // - indicateConditionBelowRange()
@@ -29,10 +29,10 @@
 // - syncNTP()
 // - connectAWS()
 // - mqttPublishMessage()
-// Security Considerations:
+// * Security Considerations:
 // - Ensure stable power supply to prevent erroneous readings.
 // - Avoid exposing the sensor to extreme conditions beyond its operating range.
-// Testing and Validation Approach:
+// * Testing and Validation Approach:
 // - Test under known temperature and humidity conditions to validate sensor readings.
 // - Simulate error conditions by disconnecting the sensor.
 // **********************************
@@ -107,7 +107,7 @@ enum SensorConditionStatus
 SensorConditionStatus currentCondition = SensorError; // Default to Error until the first successful reading
 
 // * Blinking control variables
-bool isBlinkingEnabled = false;                        // Flag for LED blinking state
+bool isBlinkingEnabled = false;                  // Flag for LED blinking state
 unsigned long lastBlinkTime = 0;                 // Last time the LED blinked
 constexpr long DATA_LED_BLINK_INTERVAL_MS = 100; // Interval between blinks
 int blinkingLED = -1;                            // Assuming -1 as an invalid value indicating no LED is set for blinking.
@@ -132,17 +132,17 @@ String AWS_IOT_PUBLISH_TOPIC;                           // MQTT topic to publish
 DHT dht(DHT_PIN, DHT_TYPE); // Initialize DHT sensor
 
 // * Declare functions
-void checkSensorReadings(float &humidity, float &temperatureC, float &temperatureF);                        // Function to read and process sensor data
-void updateStatusLEDs(bool isRedOn, bool isGreenOn, bool isBlueOn);                                                     // Function to update the RGB LED
-void indicateNormalCondition();                                                                             // Function to indicate normal conditions
-void indicateConditionBelowRange();                                                                         // Function to indicate condition below range
-void indicateConditionAboveRange();                                                                         // Function to indicate condition above range
-void indicateSensorError();                                                                                 // Function to indicate sensor error
-void blinkLEDs();                                                                                           // Function to handle LED blinking and buzzer beeping
-void connectToWiFi();                                                                                       // Function to connect to WiFi
-void pingHost();                                                                                            // Function to ping a host
-void syncNTP();                                                                                             // Function to initialize NTP
-void connectAWS();                                                                                          // Function to connect to AWS IoT Core
+void checkSensorReadings(float &humidity, float &temperatureC, float &temperatureF);                              // Function to read and process sensor data
+void updateStatusLEDs(bool isRedOn, bool isGreenOn, bool isBlueOn);                                               // Function to update the RGB LED
+void indicateNormalCondition();                                                                                   // Function to indicate normal conditions
+void indicateConditionBelowRange();                                                                               // Function to indicate condition below range
+void indicateConditionAboveRange();                                                                               // Function to indicate condition above range
+void indicateSensorError();                                                                                       // Function to indicate sensor error
+void blinkLEDs();                                                                                                 // Function to handle LED blinking and buzzer beeping
+void connectToWiFi();                                                                                             // Function to connect to WiFi
+void pingHost();                                                                                                  // Function to ping a host
+void syncNTP();                                                                                                   // Function to initialize NTP
+void connectAWS();                                                                                                // Function to connect to AWS IoT Core
 void mqttPublishMessage(float humidity, float temperatureC, float temperatureF, SensorConditionStatus condition); // Function to publish message to AWS IoT Core
 
 String calculateTimezoneString(long offsetSec, long dstOffsetSec);
@@ -290,7 +290,7 @@ void updateStatusLEDs(bool isRedOn, bool isGreenOn, bool isBlueOn) // Function t
 
 void indicateNormalCondition() // Function to indicate normal conditions
 {
-    isBlinkingEnabled = false;                        // Stop blinking
+    isBlinkingEnabled = false;                  // Stop blinking
     updateStatusLEDs(false, true, false);       // Turn on GREEN LED, off others
     ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_OFF); // Turn LED D5 off
     ledcWrite(BUZZER_CHANNEL, BUZZER_OFF);      // Mute the buzzer
@@ -299,7 +299,7 @@ void indicateNormalCondition() // Function to indicate normal conditions
 
 void indicateConditionBelowRange() // Function to indicate condition below range
 {
-    isBlinkingEnabled = true;                                 // Indicate that the blue LED should blink
+    isBlinkingEnabled = true;                           // Indicate that the blue LED should blink
     ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_OFF);         // Turn LED D5 off
     blinkingLED = DATA_LED_BELOW_BLUE;                  // Blink the blue LED
     Serial.println("Current LED Color: BLUE Blinking"); // Updated print statement
@@ -307,7 +307,7 @@ void indicateConditionBelowRange() // Function to indicate condition below range
 
 void indicateConditionAboveRange() // Function to indicate condition above range
 {
-    isBlinkingEnabled = true;                                // Indicate that the red LED should blink
+    isBlinkingEnabled = true;                          // Indicate that the red LED should blink
     ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_OFF);        // Turn LED D5 off
     blinkingLED = DATA_LED_ABOVE_RED;                  // Blink the red LED
     Serial.println("Current LED Color: RED Blinking"); // Updated print statement
@@ -315,7 +315,7 @@ void indicateConditionAboveRange() // Function to indicate condition above range
 
 void indicateSensorError() // Function to indicate sensor error
 {
-    isBlinkingEnabled = false;                           // Stop blinking
+    isBlinkingEnabled = false;                     // Stop blinking
     updateStatusLEDs(false, false, false);         // Turn off all LEDs
     ledcWrite(SYS_LED_D5_CHANNEL, SYS_LED_ON);     // Turn LED D5 solid red
     ledcWrite(BUZZER_CHANNEL, BUZZER_VOLUME_HALF); // Set buzzer to half volume
@@ -325,7 +325,7 @@ void indicateSensorError() // Function to indicate sensor error
 void blinkLEDs() // Function to handle LED blinking and buzzer beeping
 {
     if (!isBlinkingEnabled) // Check if blinking is not enabled
-        return;       // Exit if blinking is not enabled
+        return;             // Exit if blinking is not enabled
 
     unsigned long currentMillis = millis();                          // Get current time
     if (currentMillis - lastBlinkTime >= DATA_LED_BLINK_INTERVAL_MS) // Check if it's time to toggle the LED state
