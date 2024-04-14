@@ -144,7 +144,6 @@ void pingHost();                                                                
 void syncNTP();                                                                                                   // Function to initialize NTP
 void connectAWS();                                                                                                // Function to connect to AWS IoT Core
 void mqttPublishMessage(float humidity, float temperatureC, float temperatureF, SensorConditionStatus condition); // Function to publish message to AWS IoT Core
-
 String calculateTimezoneString(long offsetSec); // Function to determine the timezone string from the offset in seconds
 String checkDSTStatus(long dstOffsetSec);       // Function to check DST status based on DST offset
 String timezoneStr;                             // String to hold the timezone
