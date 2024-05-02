@@ -22,12 +22,9 @@
 // Constants and Variables Declaration
 // **********************************
 constexpr int VIBRATION_PIN = 0; // Pin connected to the VIBRATION sensor
-
-constexpr unsigned long SENSOR_READ_INTERVAL = 1000; // Read interval in milliseconds
-unsigned long lastCheckTime = 0;                     // Last time the sensor was checked
-constexpr int LED_RED_PIN = 2;                       // Red LED pin
-constexpr int LED_GREEN_PIN = 3;                     // Green LED pin
-constexpr int LED_BLUE_PIN = 10;                     // Blue LED pin
+constexpr int LED_RED_PIN = 2;   // Red LED pin
+constexpr int LED_GREEN_PIN = 3; // Green LED pin
+constexpr int LED_BLUE_PIN = 10; // Blue LED pin
 
 // * Buzzer Pins and PWM settings
 constexpr int BUZZER_PIN = 11;          // Pin connected to the Piezo Buzzer
@@ -36,6 +33,9 @@ constexpr int BUZZER_FREQUENCY = 2000;  // Frequency for Buzzer PWM
 constexpr int BUZZER_RESOLUTION = 10;   // Resolution for Buzzer PWM (10-bit = 0-1023)
 constexpr int BUZZER_VOLUME_HALF = 512; // Half volume for the buzzer
 constexpr int BUZZER_OFF = 0;           // Turn off the buzzer
+
+constexpr unsigned long SENSOR_READ_INTERVAL = 1000; // Read interval in milliseconds
+unsigned long lastCheckTime = 0;                     // Last time the sensor was checked
 
 bool isBuzzerOn = false; // Track whether the buzzer should be considered ON or OFF
 
