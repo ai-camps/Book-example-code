@@ -43,7 +43,7 @@
 #include <ESP32Ping.h>         // Include the Ping library
 #include <WiFiClientSecure.h>  // Include the WiFiClientSecure library
 #include <time.h>              // Include the time library
-#include "SecureCredentials.h" // Include the secrets file
+#include "TLSCredentials.h" // Include the secrets file
 #include <Update.h>            // Include the Update library
 #include <PubSubClient.h>      // Include the PubSubClient library
 #include "HardwareInfo.h"      // Include the HardwareInfo class
