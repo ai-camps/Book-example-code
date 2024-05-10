@@ -12,9 +12,9 @@
 // - Periodically read from DHT11 sensor connected to IO2.
 // - Indicate conditions via LEDs and Piezo Buzzer connected to IO11, IO12, and IO13.
 // Hardware Connection:
-// - DHT11 data pin -> IO2
-// - Piezo Buzzer -> IO11
-// - RGB LED Red -> IO8, Green -> IO9, Blue -> IO4
+// - DHT11 data pin -> GPIO2
+// - Piezo Buzzer -> GPIO11
+// - RGB LED Red -> GPI3, Green -> GPIO10, Blue -> GPIO6
 // - LED D4 -> IO12, LED D5 -> IO13
 // New Created Function/Class:
 // - checkSensorReadings()
@@ -44,9 +44,9 @@ constexpr int DHTPIN = 2;      // Pin connected to the DHT11 data pin
 constexpr int DHTTYPE = DHT11; // Specify DHT11 type
 
 // Data RGB LED Pins
-constexpr int DATA_LED_ABOVE_RED = 8;    // Pin for the red component of RGB LED
-constexpr int DATA_LED_NORMAL_GREEN = 9; // Pin for the green component of RGB LED
-constexpr int DATA_LED_BELOW_BLUE = 4;   // Pin for the blue component of RGB LED
+constexpr int DATA_LED_ABOVE_RED = 3;    // Pin for the red component of RGB LED
+constexpr int DATA_LED_NORMAL_GREEN = 10; // Pin for the green component of RGB LED
+constexpr int DATA_LED_BELOW_BLUE = 6;   // Pin for the blue component of RGB LED
 
 // LED D4 and D5 Pins and PWM settings
 constexpr int SYS_LED_D4 = 12;        // Pin to LED D4, will be used for future use case.
