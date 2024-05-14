@@ -22,51 +22,68 @@
 // Constants and Variables Declaration
 // **********************************
 constexpr int VIBRATION_PIN = 0; // Pin connected to the VIBRATION sensor
+
+// * LED PINs and PWM settings
 constexpr int LED_RED_PIN = 2;   // Red LED pin
 constexpr int LED_GREEN_PIN = 3; // Green LED pin
 constexpr int LED_BLUE_PIN = 10; // Blue LED pin
 
+constexpr int PWM_LED_RED_CHANNEL = 1;   // PWM channel for Red LED
+constexpr int PWM_LED_GREEN_CHANNEL = 2; // PWM channel for Green LED
+constexpr int PWM_LED_BLUE_CHANNEL = 3;  // PWM channel for Blue LED
+
+constexpr int PWM_LED_FREQUENCY = 5000; // Suitable frequency for LEDs
+constexpr int PWM_LED_RESOLUTION = 8;   // 8-bit resolution (0-255)
+
 // * Buzzer Pins and PWM settings
-constexpr int BUZZER_PIN = 11;          // Pin connected to the Piezo Buzzer
-constexpr int BUZZER_CHANNEL = 0;       // LEDC channel for Piezo Buzzer
-constexpr int BUZZER_FREQUENCY = 2000;  // Frequency for Buzzer PWM
-constexpr int BUZZER_RESOLUTION = 10;   // Resolution for Buzzer PWM (10-bit = 0-1023)
-constexpr int BUZZER_VOLUME_HALF = 512; // Half volume for the buzzer
-constexpr int BUZZER_OFF = 0;           // Turn off the buzzer
+constexpr int BUZZER_PIN = 11;              // Pin connected to the Piezo Buzzer
+constexpr int PWM_BUZZER_CHANNEL = 0;       // PWM channel for Piezo Buzzer
+constexpr int PWM_BUZZER_FREQUENCY = 2000;  // Frequency for Buzzer PWM
+constexpr int PWM_BUZZER_RESOLUTION = 10;   // Resolution for Buzzer PWM (10-bit = 0-1023)
+constexpr int PWM_BUZZER_VOLUME_HALF = 512; // Half volume for the buzzer
+constexpr int PWM_BUZZER_OFF = 0;           // Turn off the buzzer
 
 constexpr unsigned long SENSOR_READ_INTERVAL = 1000; // Read interval in milliseconds
 unsigned long lastCheckTime = 0;                     // Last time the sensor was checked
+
+int currentRedState = 0; // 0 means off, values > 0 mean on (at various intensities)
+int currentGreenState = 0;
+int currentBlueState = 0;
 
 bool isBuzzerOn = false; // Track whether the buzzer should be considered ON or OFF
 
 // **********************************
 // Funcion Declaration
 // **********************************
-bool readVibrationSensor();                         // Function to read the vibration sensor
-void updateIndicatorStatus(bool VibrationDetected); // Function to control outputs based on sensor readings
-void beepBuzzerAlert(bool activate);                // Function to activate buzzer
-void printSystemStatus(bool VibrationDetected);     // Function to print system status
+bool readVibrationSensor();                          // Function to read the tilt sensor
+void updateIndicatorStatus(bool VibrationDetected);  // Function to control outputs based on sensor readings
+void beepBuzzerAlert(bool activate);            // Function to activate buzzer
+void printSystemStatus(bool VibrationDetected); // Function to print system status
 
 // **********************************
 // Setup Function
 // **********************************
 void setup()
 {
-    Serial.begin(115200);           // Start serial communication
-    pinMode(VIBRATION_PIN, INPUT);  // Set the sensor pin as input
-    pinMode(LED_RED_PIN, OUTPUT);   // Set Red LED pins as output
-    pinMode(LED_GREEN_PIN, OUTPUT); // Set Green LED pins as output
-    pinMode(LED_BLUE_PIN, OUTPUT);  // Set Blue LED pins as output
-    pinMode(BUZZER_PIN, OUTPUT);    // Set buzzer pin as output
+    Serial.begin(115200);
+    pinMode(VIBRATION_PIN, INPUT);
 
-    // Setup and Attach PWM channels to the Piezo Buzzer
-    ledcSetup(BUZZER_CHANNEL, BUZZER_FREQUENCY, BUZZER_RESOLUTION); // Setup LEDC channel for Piezo Buzzer
-    ledcAttachPin(BUZZER_PIN, BUZZER_CHANNEL);                      // Attach Piezo Buzzer to PWM channel
+    // * LED PWM setup
+    ledcSetup(PWM_LED_RED_CHANNEL, PWM_LED_FREQUENCY, PWM_LED_RESOLUTION);   // Setup PWM channel for Red LED
+    ledcAttachPin(LED_RED_PIN, PWM_LED_RED_CHANNEL);                         // Attach Red LED to PWM channel
+    ledcSetup(PWM_LED_GREEN_CHANNEL, PWM_LED_FREQUENCY, PWM_LED_RESOLUTION); // Setup PWM channel for Green LED
+    ledcAttachPin(LED_GREEN_PIN, PWM_LED_GREEN_CHANNEL);                     // Attach Green LED to PWM channel
+    ledcSetup(PWM_LED_BLUE_CHANNEL, PWM_LED_FREQUENCY, PWM_LED_RESOLUTION);  // Setup PWM channel for Blue
+    ledcAttachPin(LED_BLUE_PIN, PWM_LED_BLUE_CHANNEL);                       // Attach Blue LED to PWM channel
 
-    // Initial LED state setup based on initial sensor read
-    bool initialVibrationDetected = readVibrationSensor(); // Read initial sensor value
-    updateIndicatorStatus(initialVibrationDetected);       // Update LED state
-    beepBuzzerAlert(initialVibrationDetected);             // Activate buzzer based on initial sensor value
+    // * Buzzer PWM setup
+    ledcSetup(PWM_BUZZER_CHANNEL, PWM_BUZZER_FREQUENCY, PWM_BUZZER_RESOLUTION); // Setup PWM channel for Buzzer
+    ledcAttachPin(BUZZER_PIN, PWM_BUZZER_CHANNEL);                              // Attach Buzzer to PWM channel
+
+    // * Initial LED state setup based on initial sensor read
+    bool initialVibrationDetected = readVibrationSensor(); // Read the tilt sensor
+    updateIndicatorStatus(initialVibrationDetected);  // Update the LED status based on sensor reading
+    beepBuzzerAlert(initialVibrationDetected);        // Activate buzzer based on sensor reading
 }
 
 // **********************************
@@ -77,66 +94,70 @@ void loop()
     if (millis() - lastCheckTime >= SENSOR_READ_INTERVAL)
     {
         lastCheckTime = millis();
-        bool VibrationDetected = readVibrationSensor();
-        updateIndicatorStatus(VibrationDetected);
-        beepBuzzerAlert(VibrationDetected);
-        printSystemStatus(VibrationDetected); // Print system status for debugging and monitoring
+        bool VibrationDetected = readVibrationSensor(); // Read the tilt sensor
+        updateIndicatorStatus(VibrationDetected);  // Update the LED status based on sensor reading
+        beepBuzzerAlert(VibrationDetected);        // Activate buzzer based on sensor reading
+        printSystemStatus(VibrationDetected);      // Print system status for debugging and monitoring
     }
 }
 
 // **********************************
 // Function Definitions
 // **********************************
-bool readVibrationSensor() // Function to read the VIBRATION sensor
+bool readVibrationSensor() // Function to read the TILT sensor
 {
     int sensorValue = digitalRead(VIBRATION_PIN); // Read the sensor value
-    return (sensorValue == HIGH);                 // Return true if the sensor value is high
+    return (sensorValue == HIGH);            // Return true if the sensor value is high
 }
 
 void updateIndicatorStatus(bool VibrationDetected) // Function to control outputs based on sensor readings
 {
-    static bool lastRedState = !VibrationDetected;  // Assuming red LED is used for this application
-    static bool lastGreenState = VibrationDetected; // Assuming green LED is used for this application
-    if (lastRedState != VibrationDetected)          // If the state has changed
+    if (VibrationDetected) // If tilt is detected
     {
-        digitalWrite(LED_RED_PIN, VibrationDetected ? HIGH : LOW); // Update the LED state
-        lastRedState = VibrationDetected;                          // Update the last state
+        ledcWrite(PWM_LED_RED_CHANNEL, 255); // Set to full volume
+        currentRedState = 255;               // Update the red state
+        ledcWrite(PWM_LED_GREEN_CHANNEL, 0); // Set to off
+        currentGreenState = 0;               // Update the green state
+        ledcWrite(PWM_LED_BLUE_CHANNEL, 0);  // Set to off
+        currentBlueState = 0;                // Update the blue state
     }
-    if (lastGreenState != !VibrationDetected) // If the state has changed
+    else
     {
-        digitalWrite(LED_GREEN_PIN, !VibrationDetected ? HIGH : LOW); // Update the LED state
-        lastGreenState = !VibrationDetected;                          // Update the last state
+        ledcWrite(PWM_LED_RED_CHANNEL, 0);     // Set to off
+        currentRedState = 0;                   // Update the red state
+        ledcWrite(PWM_LED_GREEN_CHANNEL, 255); // Set to full volume
+        currentGreenState = 255;               // Update the green state
+        ledcWrite(PWM_LED_BLUE_CHANNEL, 0);    // Set to off
+        currentBlueState = 0;                  // Update the blue state
     }
-    digitalWrite(LED_BLUE_PIN, HIGH); // Assuming blue LED is not used for this application
-
-#ifdef DEBUG
-    Serial.print("VIBRATION Detected: ");
-    Serial.println(VibrationDetected ? "Yes" : "No");
-#endif
 }
 
 void beepBuzzerAlert(bool activate) // Function to activate buzzer
 {
-    if (activate) // If vibration is detected
+    if (activate) // If tilt is detected
     {
-        ledcWrite(BUZZER_CHANNEL, BUZZER_VOLUME_HALF); // Set to half volume
-        isBuzzerOn = true;                             // Update the buzzer state
+        ledcWrite(PWM_BUZZER_CHANNEL, PWM_BUZZER_VOLUME_HALF); // Set to half volume
+        isBuzzerOn = true;                                     // Update the buzzer state
     }
     else
     {
-        ledcWrite(BUZZER_CHANNEL, BUZZER_OFF); // Turn off the buzzer
-        isBuzzerOn = false;                    // Update the buzzer state
+        ledcWrite(PWM_BUZZER_CHANNEL, PWM_BUZZER_OFF); // Turn off the buzzer
+        isBuzzerOn = false;                            // Update the buzzer state
     }
 }
 
 void printSystemStatus(bool VibrationDetected) // Function to print system status
 {
+    Serial.print("PIN Value - "); 
+    Serial.println(digitalRead(VIBRATION_PIN));
     Serial.print("Vibration Detected: ");
     Serial.println(VibrationDetected ? "YES" : "NO");
     Serial.print("Red LED State: ");
-    Serial.println(digitalRead(LED_RED_PIN) == HIGH ? "ON" : "OFF");
+    Serial.println(currentRedState > 0 ? "ON" : "OFF");
     Serial.print("Green LED State: ");
-    Serial.println(digitalRead(LED_GREEN_PIN) == HIGH ? "ON" : "OFF");
+    Serial.println(currentGreenState > 0 ? "ON" : "OFF");
+    Serial.print("Blue LED State: ");
+    Serial.println(currentBlueState > 0 ? "ON" : "OFF");
     Serial.print("Buzzer State: ");
     Serial.println(isBuzzerOn ? "ON" : "OFF");
 }
