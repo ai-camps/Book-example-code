@@ -14,6 +14,7 @@ Requirements:
 •	Connect ESP32 GPIO pin 0 to the Trig pin and pin 1 to the Echo pin of HC-SR04.
 •	Connect ESP32 GPIO pin 2, 3, 10 to the R/G/B pins of a 3-color LED.
 •	Connect ESP32 GPIO pin 11 to the input pin of Piezo Buzzer.
+•	Use PWM (Pulse-Width Modulation) to control the Piezo Buzzer and the 3-color LED.
 •	If the distance value is within 10 cm, beep the Piezo Buzzer and change the LED color to red.
 •	If the distance value is between 10cm to 30 cm, beep the Piezo Buzzer and change the LED color to blue.
 •	If the distance value is beyond 30 cm, mute the Piezo Buzzer and maintain the LED color to green.
