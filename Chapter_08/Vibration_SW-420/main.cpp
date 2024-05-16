@@ -55,9 +55,9 @@ bool isBuzzerOn = false; // Track whether the buzzer should be considered ON or 
 // **********************************
 // Funcion Declaration
 // **********************************
-bool readVibrationSensor();                          // Function to read the tilt sensor
+bool isVibrationOn();                          // Function to read the tilt sensor
 void updateIndicatorStatus(bool VibrationDetected);  // Function to control outputs based on sensor readings
-void beepBuzzerAlert(bool activate);            // Function to activate buzzer
+void beepBuzzerAlert(bool VibrationDetected);            // Function to activate buzzer
 void printSystemStatus(bool VibrationDetected); // Function to print system status
 
 // **********************************
@@ -81,7 +81,7 @@ void setup()
     ledcAttachPin(BUZZER_PIN, PWM_BUZZER_CHANNEL);                              // Attach Buzzer to PWM channel
 
     // * Initial LED state setup based on initial sensor read
-    bool initialVibrationDetected = readVibrationSensor(); // Read the tilt sensor
+    bool initialVibrationDetected = isVibrationOn(); // Read the tilt sensor
     updateIndicatorStatus(initialVibrationDetected);  // Update the LED status based on sensor reading
     beepBuzzerAlert(initialVibrationDetected);        // Activate buzzer based on sensor reading
 }
@@ -94,7 +94,7 @@ void loop()
     if (millis() - lastCheckTime >= SENSOR_READ_INTERVAL)
     {
         lastCheckTime = millis();
-        bool VibrationDetected = readVibrationSensor(); // Read the tilt sensor
+        bool VibrationDetected = isVibrationOn(); // Read the tilt sensor
         updateIndicatorStatus(VibrationDetected);  // Update the LED status based on sensor reading
         beepBuzzerAlert(VibrationDetected);        // Activate buzzer based on sensor reading
         printSystemStatus(VibrationDetected);      // Print system status for debugging and monitoring
@@ -104,10 +104,10 @@ void loop()
 // **********************************
 // Function Definitions
 // **********************************
-bool readVibrationSensor() // Function to read the TILT sensor
+bool isVibrationOn() // Function to read the TILT sensor
 {
-    int sensorValue = digitalRead(VIBRATION_PIN); // Read the sensor value
-    return (sensorValue == HIGH);            // Return true if the sensor value is high
+    int vibrationState = digitalRead(VIBRATION_PIN); // Read the sensor value
+    return (vibrationState == HIGH);            // Return true if the sensor value is high
 }
 
 void updateIndicatorStatus(bool VibrationDetected) // Function to control outputs based on sensor readings
@@ -132,9 +132,9 @@ void updateIndicatorStatus(bool VibrationDetected) // Function to control output
     }
 }
 
-void beepBuzzerAlert(bool activate) // Function to activate buzzer
+void beepBuzzerAlert(bool VibrationDetected) // Function to activate buzzer
 {
-    if (activate) // If tilt is detected
+    if (VibrationDetected) // If tilt is detected
     {
         ledcWrite(PWM_BUZZER_CHANNEL, PWM_BUZZER_VOLUME_HALF); // Set to half volume
         isBuzzerOn = true;                                     // Update the buzzer state
