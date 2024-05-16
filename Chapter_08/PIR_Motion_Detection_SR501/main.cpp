@@ -55,9 +55,9 @@ bool isBuzzerOn = false; // Track whether the buzzer should be considered ON or 
 // **********************************
 // Funcion Declaration
 // **********************************
-bool readMotionSensor();                         // Function to read the Motion sensor
+bool isPIROn();                         // Function to read the Motion sensor
 void updateIndicatorStatus(bool MotionDetected); // Function to control outputs based on sensor readings
-void beepBuzzerAlert(bool activate);             // Function to activate buzzer
+void beepBuzzerAlert(bool MotionDetected);             // Function to activate buzzer
 void printSystemStatus(bool MotionDetected);     // Function to print system status
 
 // **********************************
@@ -81,7 +81,7 @@ void setup()
     ledcAttachPin(BUZZER_PIN, PWM_BUZZER_CHANNEL);                              // Attach Buzzer to PWM channel
 
     // * Initial LED state setup based on initial sensor read
-    bool initialMotionDetected = readMotionSensor(); // Read the Motion sensor
+    bool initialMotionDetected = isPIROn(); // Read the Motion sensor
     updateIndicatorStatus(initialMotionDetected);  // Update the LED status based on sensor reading
     beepBuzzerAlert(initialMotionDetected);        // Activate buzzer based on sensor reading
 }
@@ -95,7 +95,7 @@ void loop()
     if (millis() - lastCheckTime >= SENSOR_READ_INTERVAL)
     {
         lastCheckTime = millis();
-        bool MotionDetected = readMotionSensor(); // Read the Motion sensor
+        bool MotionDetected = isPIROn(); // Read the Motion sensor
         updateIndicatorStatus(MotionDetected);  // Update the LED status based on sensor reading
         beepBuzzerAlert(MotionDetected);        // Activate buzzer based on sensor reading
         printSystemStatus(MotionDetected);      // Print system status for debugging and monitoring
@@ -105,10 +105,10 @@ void loop()
 // **********************************
 // Function Definitions
 // **********************************
-bool readMotionSensor() // Function to read the Motion sensor
+bool isPIROn() // Function to read the Motion sensor
 {
-    int sensorValue = digitalRead(MOTION_PIN); // Read the sensor value
-    return (sensorValue == HIGH);            // Return true if the sensor value is high
+    int pirState = digitalRead(MOTION_PIN); // Read the sensor value
+    return (pirState == HIGH);            // Return true if the sensor value is high
 }
 
 void updateIndicatorStatus(bool MotionDetected) // Function to control outputs based on sensor readings
@@ -133,9 +133,9 @@ void updateIndicatorStatus(bool MotionDetected) // Function to control outputs b
     }
 }
 
-void beepBuzzerAlert(bool activate) // Function to activate buzzer
+void beepBuzzerAlert(bool MotionDetected) // Function to activate buzzer
 {
-    if (activate) // If Motion is detected
+    if (MotionDetected) // If Motion is detected
     {
         ledcWrite(PWM_BUZZER_CHANNEL, PWM_BUZZER_VOLUME_HALF); // Set to half volume
         isBuzzerOn = true;                                     // Update the buzzer state
