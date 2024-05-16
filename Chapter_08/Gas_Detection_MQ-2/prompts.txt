@@ -16,6 +16,7 @@ Requirements:
 •	Connect ESP32 GPIO pin 0 to the D0 pin of MQ-2.
 •	Connect ESP32 GPIO pin 2, 3, 10 to the R/G/B pins of a 3-color LED.
 •	Connect ESP32 GPIO pin 11 to the input pin of Piezo Buzzer.
+•	Use PWM (Pulse-Width Modulation) to control the Piezo Buzzer and the 3-color LED.
 •	If the value is HIGH, that indicates gas is detected, beep the Piezo Buzzer, and change the LED color to red.
 •	If the value is LOW, that indicates no gas is detected, mute the Piezo Buzzer, and maintain the LED color to green.
 •	Print the current value, beep on/off status, and LED color.
