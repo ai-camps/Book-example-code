@@ -132,9 +132,9 @@ void updateIndicatorStatus(bool GasDetected) // Function to control outputs base
     }
 }
 
-void beepBuzzerAlert(bool activate) // Function to activate buzzer
+void beepBuzzerAlert(bool GasDetected) // Function to activate buzzer
 {
-    if (activate) // If Gas is detected
+    if (GasDetected) // If Gas is detected
     {
         ledcWrite(PWM_BUZZER_CHANNEL, PWM_BUZZER_VOLUME_HALF); // Set to half volume
         isBuzzerOn = true;                                     // Update the buzzer state
