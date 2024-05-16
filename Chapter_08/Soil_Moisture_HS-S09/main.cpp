@@ -55,10 +55,10 @@ bool isBuzzerOn = false; // Track whether the buzzer should be considered ON or 
 // **********************************
 // Funcion Declaration
 // **********************************
-bool readMoistureSensor();                          // Function to read the Moisture sensor
+bool isMoistureOn();                          // Function to read the Moisture sensor
 void updateIndicatorStatus(bool MoistureDetected);  // Function to control outputs based on sensor readings
-void beepBuzzerAlert(bool activate);            // Function to activate buzzer
-void printSystemStatus(bool VibrationDetected); // Function to print system status
+void beepBuzzerAlert(bool MoistureDetected);            // Function to activate buzzer
+void printSystemStatus(bool MoistureDetected); // Function to print system status
 
 // **********************************
 // Setup Function
@@ -81,7 +81,7 @@ void setup()
     ledcAttachPin(BUZZER_PIN, PWM_BUZZER_CHANNEL);                              // Attach Buzzer to PWM channel
 
     // * Initial LED state setup based on initial sensor read
-    bool initialMoistureDetected = readMoistureSensor(); // Read the Moisture sensor
+    bool initialMoistureDetected = isMoistureOn(); // Read the Moisture sensor
     updateIndicatorStatus(initialMoistureDetected);  // Update the LED status based on sensor reading
     beepBuzzerAlert(initialMoistureDetected);        // Activate buzzer based on sensor reading
 }
@@ -94,7 +94,7 @@ void loop()
     if (millis() - lastCheckTime >= SENSOR_READ_INTERVAL)
     {
         lastCheckTime = millis();
-        bool MoistureDetected = readMoistureSensor(); // Read the Moisture sensor
+        bool MoistureDetected = isMoistureOn(); // Read the Moisture sensor
         updateIndicatorStatus(MoistureDetected);  // Update the LED status based on sensor reading
         beepBuzzerAlert(MoistureDetected);        // Activate buzzer based on sensor reading
         printSystemStatus(MoistureDetected);      // Print system status for debugging and monitoring
@@ -104,10 +104,10 @@ void loop()
 // **********************************
 // Function Definitions
 // **********************************
-bool readMoistureSensor() // Function to read the Moisture sensor
+bool isMoistureOn() // Function to read the Moisture sensor
 {
-    int sensorValue = digitalRead(MOISTURE_PIN); // Read the sensor value
-    return (sensorValue == LOW);            // Return true if the sensor value is low
+    int moistureState = digitalRead(MOISTURE_PIN); // Read the sensor value
+    return (moistureState == LOW);            // Return true if the sensor value is low
 }
 
 void updateIndicatorStatus(bool MoistureDetected) // Function to control outputs based on sensor readings
@@ -132,9 +132,9 @@ void updateIndicatorStatus(bool MoistureDetected) // Function to control outputs
     }
 }
 
-void beepBuzzerAlert(bool activate) // Function to activate buzzer
+void beepBuzzerAlert(bool MoistureDetected) // Function to activate buzzer
 {
-    if (activate) // If Moisture is detected
+    if (MoistureDetected) // If Moisture is detected
     {
         ledcWrite(PWM_BUZZER_CHANNEL, PWM_BUZZER_VOLUME_HALF); // Set to half volume
         isBuzzerOn = true;                                     // Update the buzzer state
