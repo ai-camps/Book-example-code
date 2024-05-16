@@ -57,7 +57,7 @@ bool isBuzzerOn = false; // Track whether the buzzer should be considered ON or 
 // **********************************
 bool isFlameOn();                         // Function to read the flame sensor
 void updateIndicatorStatus(bool flameDetected); // Function to control outputs based on sensor readings
-void beepBuzzerAlert(bool activate);            // Function to activate buzzer
+void beepBuzzerAlert(bool flameDetected);            // Function to activate buzzer
 void printSystemStatus(bool flameDetected); // Function to print system status
 
 // **********************************
