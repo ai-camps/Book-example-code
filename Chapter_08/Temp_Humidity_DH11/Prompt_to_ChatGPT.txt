@@ -14,6 +14,7 @@ Requirements:
 •	Connect ESP32 GPIO pin 0 to the signal output pin of DHT11.
 •	Connect ESP32 GPIO pin 2, 3, 10 to the R/G/B pins of a 3-color LED.
 •	Connect ESP32 GPIO pin 11 to the input pin of Piezo Buzzer.
+•	Use PWM (Pulse-Width Modulation) to control the Piezo Buzzer and the 3-color LED.
 •	LED turns to steady green color when temperature falls between 15°C to 25°C and humidity between 10% to 80%.
 •	LED turns to steady red color when temperature exceeds 25°C or humidity is over 80%, beep fast-paced, high-pitch buzzer alerts.
 •	LED turns to steady blue color when temperature is below 15°C or humidity is less than 10%, beep fast-paced, high-pitch buzzer alerts.
