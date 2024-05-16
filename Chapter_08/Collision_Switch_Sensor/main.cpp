@@ -10,7 +10,7 @@
 // This code is designed to detect vibration presence using a vibration sensor connected to an ESP32 C3.
 // It utilizes an RGB LED and a Piezo Buzzer to provide visual and auditory alerts based on vibration detection.
 // Hardware Connection:
-// - VIBRATION D0 pin -> GPIO0
+// - Collision D0 pin -> GPIO0
 // - RGB LED Red -> GPIO2, Green -> GPIO3, Blue -> GPIO10
 // - Piezo Buzzer -> GPIO11
 // **********************************
@@ -55,9 +55,9 @@ bool isBuzzerOn = false; // Track whether the buzzer should be considered ON or 
 // **********************************
 // Funcion Declaration
 // **********************************
-bool readCollisionSensor();                          // Function to read the Collision sensor
+bool isCollisionOn();                          // Function to read the Collision sensor
 void updateIndicatorStatus(bool CollisionDetected);  // Function to control outputs based on sensor readings
-void beepBuzzerAlert(bool activate);            // Function to activate buzzer
+void beepBuzzerAlert(bool CollisionDetected);            // Function to activate buzzer
 void printSystemStatus(bool VibrationDetected); // Function to print system status
 
 // **********************************
@@ -81,7 +81,7 @@ void setup()
     ledcAttachPin(BUZZER_PIN, PWM_BUZZER_CHANNEL);                              // Attach Buzzer to PWM channel
 
     // * Initial LED state setup based on initial sensor read
-    bool initialCollisionDetected = readCollisionSensor(); // Read the Collision sensor
+    bool initialCollisionDetected = isCollisionOn(); // Read the Collision sensor
     updateIndicatorStatus(initialCollisionDetected);  // Update the LED status based on sensor reading
     beepBuzzerAlert(initialCollisionDetected);        // Activate buzzer based on sensor reading
 }
@@ -94,7 +94,7 @@ void loop()
     if (millis() - lastCheckTime >= SENSOR_READ_INTERVAL)
     {
         lastCheckTime = millis();
-        bool CollisionDetected = readCollisionSensor(); // Read the Collision sensor
+        bool CollisionDetected = isCollisionOn(); // Read the Collision sensor
         updateIndicatorStatus(CollisionDetected);  // Update the LED status based on sensor reading
         beepBuzzerAlert(CollisionDetected);        // Activate buzzer based on sensor reading
         printSystemStatus(CollisionDetected);      // Print system status for debugging and monitoring
@@ -104,10 +104,10 @@ void loop()
 // **********************************
 // Function Definitions
 // **********************************
-bool readCollisionSensor() // Function to read the Collision sensor
+bool isCollisionOn() // Function to read the Collision sensor
 {
-    int sensorValue = digitalRead(COLLISION_PIN); // Read the sensor value
-    return (sensorValue == LOW);            // Return true if the sensor value is high
+    int collisionState = digitalRead(COLLISION_PIN); // Read the sensor value
+    return (collisionState == LOW);            // Return true if the sensor value is high
 }
 
 void updateIndicatorStatus(bool CollisionDetected) // Function to control outputs based on sensor readings
@@ -132,9 +132,9 @@ void updateIndicatorStatus(bool CollisionDetected) // Function to control output
     }
 }
 
-void beepBuzzerAlert(bool activate) // Function to activate buzzer
+void beepBuzzerAlert(bool CollisionDetected) // Function to activate buzzer
 {
-    if (activate) // If Collision is detected
+    if (CollisionDetected) // If Collision is detected
     {
         ledcWrite(PWM_BUZZER_CHANNEL, PWM_BUZZER_VOLUME_HALF); // Set to half volume
         isBuzzerOn = true;                                     // Update the buzzer state
