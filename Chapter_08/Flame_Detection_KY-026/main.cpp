@@ -53,9 +53,9 @@ int currentBlueState = 0;
 bool isBuzzerOn = false; // Track whether the buzzer should be considered ON or OFF
 
 // **********************************
-// Funcion Declaration
+// Function Declaration
 // **********************************
-bool readFlameSensor();                         // Function to read the flame sensor
+bool isFlameOn();                         // Function to read the flame sensor
 void updateIndicatorStatus(bool flameDetected); // Function to control outputs based on sensor readings
 void beepBuzzerAlert(bool activate);            // Function to activate buzzer
 void printSystemStatus(bool flameDetected); // Function to print system status
@@ -74,7 +74,7 @@ void setup()
     ledcAttachPin(LED_RED_PIN, PWM_LED_RED_CHANNEL);                         // Attach Red LED to PWM channel
     ledcSetup(PWM_LED_GREEN_CHANNEL, PWM_LED_FREQUENCY, PWM_LED_RESOLUTION); // Setup PWM channel for Green LED
     ledcAttachPin(LED_GREEN_PIN, PWM_LED_GREEN_CHANNEL);                     // Attach Green LED to PWM channel
-    ledcSetup(PWM_LED_BLUE_CHANNEL, PWM_LED_FREQUENCY, PWM_LED_RESOLUTION);  // Setup PWM channel for Blue
+    ledcSetup(PWM_LED_BLUE_CHANNEL, PWM_LED_FREQUENCY, PWM_LED_RESOLUTION);  // Setup PWM channel for Blue LED
     ledcAttachPin(LED_BLUE_PIN, PWM_LED_BLUE_CHANNEL);                       // Attach Blue LED to PWM channel
 
     // * Buzzer PWM setup
@@ -82,7 +82,7 @@ void setup()
     ledcAttachPin(BUZZER_PIN, PWM_BUZZER_CHANNEL);                              // Attach Buzzer to PWM channel
 
     // * Initial LED state setup based on initial sensor read
-    bool initialFlameDetected = readFlameSensor(); // Read the tilt sensor
+    bool initialFlameDetected = isFlameOn(); // Read the flame sensor
     updateIndicatorStatus(initialFlameDetected);  // Update the LED status based on sensor reading
     beepBuzzerAlert(initialFlameDetected);        // Activate buzzer based on sensor reading
 }
@@ -95,7 +95,7 @@ void loop()
     if (millis() - lastCheckTime >= SENSOR_READ_INTERVAL)
     {
         lastCheckTime = millis();
-        bool flameDetected = readFlameSensor(); // Read the tilt sensor
+        bool flameDetected = isFlameOn(); // Read the flame sensor
         updateIndicatorStatus(flameDetected);   // Update the LED status based on sensor reading
         beepBuzzerAlert(flameDetected);         // Activate buzzer if flame is detected
         printSystemStatus(flameDetected);       // Print the system status
@@ -105,17 +105,17 @@ void loop()
 // **********************************
 // Function Definitions
 // **********************************
-bool readFlameSensor() // Function to read the flame sensor
+bool isFlameOn() // Function to read the flame sensor
 {
-    int sensorValue = digitalRead(FLAME_PIN); // Read the sensor value
-    return (sensorValue == HIGH); // Return true if the sensor value is low
+    int flameState = digitalRead(FLAME_PIN); // Read the sensor value
+    return (flameState == HIGH); // Return true if the sensor DO status is high
 }
 
-void updateIndicatorStatus(bool FlameDetected) // Function to control outputs based on sensor readings
+void updateIndicatorStatus(bool flameDetected) // Function to control outputs based on sensor readings
 {
-    if (FlameDetected) // If flame is detected
+    if (flameDetected) // If flame is detected
     {
-        ledcWrite(PWM_LED_RED_CHANNEL, 255); // Set to full volume
+        ledcWrite(PWM_LED_RED_CHANNEL, 255); // Set to full brightness
         currentRedState = 255;               // Update the red state
         ledcWrite(PWM_LED_GREEN_CHANNEL, 0); // Set to off
         currentGreenState = 0;               // Update the green state
@@ -126,33 +126,33 @@ void updateIndicatorStatus(bool FlameDetected) // Function to control outputs ba
     {
         ledcWrite(PWM_LED_RED_CHANNEL, 0);     // Set to off
         currentRedState = 0;                   // Update the red state
-        ledcWrite(PWM_LED_GREEN_CHANNEL, 255); // Set to full volume
+        ledcWrite(PWM_LED_GREEN_CHANNEL, 255); // Set to full brightness
         currentGreenState = 255;               // Update the green state
         ledcWrite(PWM_LED_BLUE_CHANNEL, 0);    // Set to off
         currentBlueState = 0;                  // Update the blue state
     }
 }
 
-void beepBuzzerAlert(bool activate) // Function to activate buzzer
+void beepBuzzerAlert(bool flameDetected) // Function to activate or deactivate the buzzer based on flame detection
 {
-    if (activate) // If tilt is detected
+    if (flameDetected) // If true, activate the buzzer
     {
         ledcWrite(PWM_BUZZER_CHANNEL, PWM_BUZZER_VOLUME_HALF); // Set to half volume
         isBuzzerOn = true;                                     // Update the buzzer state
     }
-    else
+    else // If false, deactivate the buzzer
     {
         ledcWrite(PWM_BUZZER_CHANNEL, PWM_BUZZER_OFF); // Turn off the buzzer
         isBuzzerOn = false;                            // Update the buzzer state
     }
 }
 
-void printSystemStatus(bool FlameDetected) // Function to print system status
+void printSystemStatus(bool flameDetected) // Function to print system status
 {
     Serial.print("PIN Value - "); 
     Serial.println(digitalRead(FLAME_PIN));
     Serial.print("Flame Detected: ");
-    Serial.println(FlameDetected ? "YES" : "NO");
+    Serial.println(flameDetected ? "YES" : "NO");
     Serial.print("Red LED State: ");
     Serial.println(currentRedState > 0 ? "ON" : "OFF");
     Serial.print("Green LED State: ");
