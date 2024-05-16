@@ -55,10 +55,10 @@ bool isBuzzerOn = false; // Track whether the buzzer should be considered ON or 
 // **********************************
 // Funcion Declaration
 // **********************************
-bool readGasSensor();                          // Function to read the Gas sensor
+bool isGasOn();                          // Function to read the Gas sensor
 void updateIndicatorStatus(bool GasDetected);  // Function to control outputs based on sensor readings
-void beepBuzzerAlert(bool activate);            // Function to activate buzzer
-void printSystemStatus(bool VibrationDetected); // Function to print system status
+void beepBuzzerAlert(bool GasDetected);            // Function to activate buzzer
+void printSystemStatus(bool GasDetected); // Function to print system status
 
 // **********************************
 // Setup Function
@@ -81,7 +81,7 @@ void setup()
     ledcAttachPin(BUZZER_PIN, PWM_BUZZER_CHANNEL);                              // Attach Buzzer to PWM channel
 
     // * Initial LED state setup based on initial sensor read
-    bool initialGasDetected = readGasSensor(); // Read the Gas sensor
+    bool initialGasDetected = isGasOn(); // Read the Gas sensor
     updateIndicatorStatus(initialGasDetected);  // Update the LED status based on sensor reading
     beepBuzzerAlert(initialGasDetected);        // Activate buzzer based on sensor reading
 }
@@ -94,7 +94,7 @@ void loop()
     if (millis() - lastCheckTime >= SENSOR_READ_INTERVAL)
     {
         lastCheckTime = millis();
-        bool GasDetected = readGasSensor(); // Read the Gas sensor
+        bool GasDetected = isGasOn(); // Read the Gas sensor
         updateIndicatorStatus(GasDetected);  // Update the LED status based on sensor reading
         beepBuzzerAlert(GasDetected);        // Activate buzzer based on sensor reading
         printSystemStatus(GasDetected);      // Print system status for debugging and monitoring
@@ -104,10 +104,10 @@ void loop()
 // **********************************
 // Function Definitions
 // **********************************
-bool readGasSensor() // Function to read the Gas sensor
+bool isGasOn() // Function to read the Gas sensor
 {
-    int sensorValue = digitalRead(MQ2_PIN); // Read the sensor value
-    return (sensorValue == HIGH);            // Return true if the sensor value is LOW
+    int gasState = digitalRead(MQ2_PIN); // Read the sensor value
+    return (gasState == HIGH);            // Return true if the sensor value is LOW
 }
 
 void updateIndicatorStatus(bool GasDetected) // Function to control outputs based on sensor readings
