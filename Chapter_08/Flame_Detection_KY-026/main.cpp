@@ -10,7 +10,7 @@
 // This code is designed to detect flame presence using a KY-026 flame sensor connected to an ESP32 C3.
 // It utilizes an RGB LED and a Piezo Buzzer to provide visual and auditory alerts based on flame detection.
 // Hardware Connection:
-// - KY-026 D0 pin -> GPIO0
+// - Flame sensor D0 pin -> GPIO0
 // - RGB LED Red -> GPIO2, Green -> GPIO3, Blue -> GPIO10
 // - Piezo Buzzer -> GPIO11
 // **********************************
