@@ -1,0 +1,50 @@
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"Action": [
+				"iam:CreateRole",
+				"iam:PassRole",
+				"iam:AttachRolePolicy",
+				"iam:DetachRolePolicy"
+			],
+			"Resource": "arn:aws:iam::939178389156:role/service-role/*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"iam:CreatePolicy"
+			],
+			"Resource": "arn:aws:iam::939178389156:policy/*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"iam:GetUser",
+				"iam:ListUsers",
+				"iam:GetRole",
+				"iam:ListRoles",
+				"iam:ListAttachedRolePolicies"
+			],
+			"Resource": [
+				"arn:aws:iam::939178389156:user/*",
+				"arn:aws:iam::939178389156:role/*"
+			]
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"kms:DescribeKey"
+			],
+			"Resource": "arn:aws:kms:us-west-2:939178389156:key/*"
+		},
+		{
+			"Effect": "Allow",
+			"Action": [
+				"sns:Publish"
+			],
+			"Resource": "arn:aws:sns:us-west-2:939178389156:*"
+		}
+	]
+}
