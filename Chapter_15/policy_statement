@@ -9,14 +9,14 @@
 				"iam:AttachRolePolicy",
 				"iam:DetachRolePolicy"
 			],
-			"Resource": "arn:aws:iam::939178389156:role/service-role/*"
+			"Resource": "arn:aws:iam::your_account_id:role/service-role/*"
 		},
 		{
 			"Effect": "Allow",
 			"Action": [
 				"iam:CreatePolicy"
 			],
-			"Resource": "arn:aws:iam::939178389156:policy/*"
+			"Resource": "arn:aws:iam::your_account_id:policy/*"
 		},
 		{
 			"Effect": "Allow",
@@ -28,8 +28,8 @@
 				"iam:ListAttachedRolePolicies"
 			],
 			"Resource": [
-				"arn:aws:iam::939178389156:user/*",
-				"arn:aws:iam::939178389156:role/*"
+				"arn:aws:iam::your_account_id:user/*",
+				"arn:aws:iam::your_account_id:role/*"
 			]
 		},
 		{
@@ -37,14 +37,14 @@
 			"Action": [
 				"kms:DescribeKey"
 			],
-			"Resource": "arn:aws:kms:us-west-2:939178389156:key/*"
+			"Resource": "arn:aws:kms:your_region:your_account_id:key/*"
 		},
 		{
 			"Effect": "Allow",
 			"Action": [
 				"sns:Publish"
 			],
-			"Resource": "arn:aws:sns:us-west-2:939178389156:*"
+			"Resource": "arn:aws:sns:your_region:your_account_id:*"
 		}
 	]
 }
